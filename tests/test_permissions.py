@@ -1,13 +1,14 @@
 import pytest
 from httpx import AsyncClient
-from redis.asyncio import Redis
 
 from permissions2fast_fastapi.models.role_model import Role
 from permissions2fast_fastapi.models.user_role_model import UserRole
-from permissions2fast_fastapi.models.role_permission_model import RolePermission
-from permissions2fast_fastapi.models.user_permission_model import UserPermission
+from permissions2fast_fastapi.models.permission_category_model import PermissionCategory
+from permissions2fast_fastapi.models.permission_model import Permission
+from permissions2fast_fastapi.models.route_model import Route
+from permissions2fast_fastapi.models.permission_route_model import PermissionRoute
+from permissions2fast_fastapi.models.permission_assignment_model import PermissionAssignment
 from permissions2fast_fastapi.services import access_service
-from permissions2fast_fastapi.utils import permission_cache
 
 # We reuse test_user and test_role from conftest.py
 
@@ -26,58 +27,76 @@ async def admin_role(session):
 
 @pytest.fixture
 async def setup_permissions(session, user_with_permission, admin_role):
-    # Assign Role to User
-    user_role = UserRole(user_id=user_with_permission.id, role_id=admin_role.id)
-    session.add(user_role)
+    # 1. Setup Models
+    category = PermissionCategory(name="Integration Test")
+    session.add(category)
+    await session.commit()
     
-    # Add Permission to Role
-    role_perm = RolePermission(
-        role_id=admin_role.id,
-        route_path="/api/admin",
-        method="GET",
-        is_allowed=True
-    )
-    session.add(role_perm)
+    # Permission 1: Linked to AdminRole
+    perm_admin = Permission(name="admin_access", permission_category_id=category.id)
+    session.add(perm_admin)
     
-    # Add Direct User Permission
-    user_perm = UserPermission(
-        user_id=user_with_permission.id,
-        route_path="/api/user-specific",
-        method="POST",
-        is_allowed=True
-    )
-    session.add(user_perm)
+    # Permission 2: Linked to User directly
+    perm_user = Permission(name="user_access", permission_category_id=category.id)
+    session.add(perm_user)
+    
+    # Routes
+    route_admin = Route(name="/api/admin", validate=True)
+    session.add(route_admin)
+    route_user = Route(name="/api/user", validate=True)
+    session.add(route_user)
+    route_public = Route(name="/api/public", is_active=False)
+    session.add(route_public)
+    
+    await session.commit()
+    await session.refresh(perm_admin)
+    await session.refresh(perm_user)
+    await session.refresh(route_admin)
+    await session.refresh(route_user)
+    
+    # Link Permissions -> Routes
+    session.add(PermissionRoute(permission_id=perm_admin.id, route_id=route_admin.id))
+    session.add(PermissionRoute(permission_id=perm_user.id, route_id=route_user.id))
+    
+    # Assign Role -> User
+    session.add(UserRole(role_id=admin_role.id, user_id=user_with_permission.id))
+    
+    # Assign Permission -> Role
+    session.add(PermissionAssignment(permission_id=perm_admin.id, entity_type="Role", entity_id=admin_role.id))
+    
+    # Assign Permission -> User
+    session.add(PermissionAssignment(permission_id=perm_user.id, entity_type="User", entity_id=user_with_permission.id))
     
     await session.commit()
     
-    # Clear cache for this user just in case
-    await permission_cache.invalidate_user_cache(user_with_permission.id)
-    
     yield
     
-    # Cleanup cache
-    await permission_cache.invalidate_user_cache(user_with_permission.id)
+    # Cleanup implied by session rollback/function scope usually, but if needed add here
 
 
 @pytest.mark.asyncio
-async def test_check_user_access_role_based(session, user_with_permission, admin_role, setup_permissions):
-    # Should be allowed via AdminRole
+async def test_check_user_access_role_based(session, user_with_permission, setup_permissions):
+    # Should be allowed via AdminRole -> admin_access -> /api/admin
     is_allowed = await access_service.check_user_access(
         user_with_permission.id, "/api/admin", "GET", session
     )
     assert is_allowed is True
-    
-    # Check cache population
-    cached_perms = await permission_cache.get_user_permissions(user_with_permission.id)
-    assert cached_perms is not None
-    assert any(p["route_path"] == "/api/admin" for p in cached_perms)
 
 
 @pytest.mark.asyncio
 async def test_check_user_access_direct(session, user_with_permission, setup_permissions):
-    # Should be allowed via UserPermission
+    # Should be allowed via UserPermission -> user_access -> /api/user
     is_allowed = await access_service.check_user_access(
-        user_with_permission.id, "/api/user-specific", "POST", session
+        user_with_permission.id, "/api/user", "POST", session
+    )
+    assert is_allowed is True
+
+
+@pytest.mark.asyncio
+async def test_check_user_access_public(session, user_with_permission, setup_permissions):
+    # Should be allowed because validate=False
+    is_allowed = await access_service.check_user_access(
+        user_with_permission.id, "/api/public", "GET", session
     )
     assert is_allowed is True
 
@@ -85,46 +104,50 @@ async def test_check_user_access_direct(session, user_with_permission, setup_per
 @pytest.mark.asyncio
 async def test_check_user_access_denied(session, user_with_permission, setup_permissions):
     # Should be denied (no permission)
+    # We need a route that is validated but user has no permission
+    route_secure = Route(name="/api/secure", validate=True)
+    session.add(route_secure)
+    await session.commit()
+    
     is_allowed = await access_service.check_user_access(
-        user_with_permission.id, "/api/unknown", "GET", session
+        user_with_permission.id, "/api/secure", "GET", session
+    )
+    assert is_allowed is False
+    
+    # Also undefined route
+    is_allowed = await access_service.check_user_access(
+        user_with_permission.id, "/api/undefined", "GET", session
     )
     assert is_allowed is False
 
 
 @pytest.mark.asyncio
-async def test_api_permissions_router_crud(client: AsyncClient, session, user_with_permission):
-    # Create Permission via API
-    # Note: Requires auth. Since we mocked get_auth_session, we need to ensure 
-    # the endpoint dependencies (get_current_active_user) are also handled if we test protected routes.
-    # Our conftest only overrides get_auth_session. 
-    # permissions_router endpoints depend on get_auth_session mostly, BUT they might require auth?
-    # Checking permissions_router.py... it uses `Depends(get_auth_session)`.
-    # It does NOT seems to enforce `get_current_user` in the snippets I saw!
-    # Wait, let me check the file content again.
-    # Step 25: `async def create_permission(..., session: AsyncSession = Depends(get_auth_session))`
-    # It does NOT seem to look for `get_current_user`. This might be a security hole if not protected by a global dependency or router dependency.
-    # The user manual says "Use the provided dependencies to restrict access".
-    # But the management endpoints themselves should probably be protected?
-    # Assuming they are public for now or protected at app level.
+async def test_api_permissions_flow(client: AsyncClient, session, user_with_permission):
+    # 1. Create Category
+    resp = await client.post("/permissions/categories", json={"name": "API Test"})
+    assert resp.status_code == 200
+    cat_id = resp.json()["id"]
     
-    response = await client.post(
-        "/permissions/",
-        json={
-            "user_id": user_with_permission.id,
-            "route_path": "/api/new-perm",
-            "method": "DELETE",
-            "is_allowed": True
-        }
+    # 2. Create Permission
+    resp = await client.post("/permissions/", json={"name": "api_test_perm", "permission_category_id": cat_id})
+    assert resp.status_code == 200
+    perm_id = resp.json()["id"]
+    
+    # 3. Create Route
+    resp = await client.post("/routes/", json={"name": "/api/test-flow", "validate": True})
+    assert resp.status_code == 200
+    route_id = resp.json()["id"]
+    
+    # 4. Link Permission to Route
+    resp = await client.post(f"/permissions/{perm_id}/routes", json={"permission_id": perm_id, "route_id": route_id})
+    assert resp.status_code == 200
+    
+    # 5. Assign Permission to User
+    resp = await client.post("/permissions/assign", json={"user_id": user_with_permission.id, "permission_id": perm_id})
+    assert resp.status_code == 200
+    
+    # 6. Verify Access Service check
+    is_allowed = await access_service.check_user_access(
+        user_with_permission.id, "/api/test-flow", "GET", session
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["route_path"] == "/api/new-perm"
-    assert data["method"] == "DELETE"
-    
-    perm_id = data["id"]
-    
-    # Get Permission
-    response = await client.get(f"/permissions/{perm_id}")
-    assert response.status_code == 200
-    assert response.json()["id"] == perm_id
-
+    assert is_allowed is True

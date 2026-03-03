@@ -2,7 +2,6 @@
 Role Management Router
 
 Endpoints for managing roles, role permissions, and user-role assignments.
-Note: Tenant-scoped functionality will be added by tenant2fast_fastapi module.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,13 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..schemas.role_schema import (
     RoleCreate,
-    RolePermissionCreate,
-    RolePermissionRead,
     RoleRead,
     RoleUpdate,
+    RolePermissionCreate,
     UserRoleCreate,
-    UserRoleRead,
+    UserRoleRead
 )
+from ..schemas.permission_schema import PermissionRead
 from ..services import role_service
 from oauth2fast_fastapi.dependencies import get_auth_session
 
@@ -93,31 +92,30 @@ async def delete_role(
 # Role Permissions
 
 
-@router.post("/{role_id}/permissions", response_model=RolePermissionRead)
+@router.post("/{role_id}/permissions")
 async def add_role_permission(
     role_id: int,
     perm_data: RolePermissionCreate,
     session: AsyncSession = Depends(get_auth_session),
 ):
     """Add a permission to a role."""
-    # Ensure role_id matches
-    perm_data.role_id = role_id
-
     try:
-        permission = await role_service.add_role_permission(perm_data, session)
-        return RolePermissionRead.model_validate(permission)
+        # We don't have a specific schema for PermissionAssignment read yet that is friendly, 
+        # but we can return success
+        await role_service.add_role_permission(role_id, perm_data.permission_id, session)
+        return {"message": "Permission added to role successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{role_id}/permissions", response_model=list[RolePermissionRead])
+@router.get("/{role_id}/permissions", response_model=list[PermissionRead])
 async def list_role_permissions(
     role_id: int,
     session: AsyncSession = Depends(get_auth_session),
 ):
     """List all permissions for a role."""
     permissions = await role_service.list_role_permissions(role_id, session)
-    return [RolePermissionRead.model_validate(p) for p in permissions]
+    return [PermissionRead.model_validate(p) for p in permissions]
 
 
 @router.delete("/{role_id}/permissions/{permission_id}")
@@ -127,10 +125,10 @@ async def delete_role_permission(
     session: AsyncSession = Depends(get_auth_session),
 ):
     """Delete a role permission."""
-    success = await role_service.delete_role_permission(permission_id, session)
+    success = await role_service.delete_role_permission(role_id, permission_id, session)
     if not success:
-        raise HTTPException(status_code=404, detail="Permission not found")
-    return {"message": "Permission deleted successfully"}
+        raise HTTPException(status_code=404, detail="Permission assignment not found")
+    return {"message": "Permission removed from role successfully"}
 
 
 # User Roles
@@ -143,20 +141,27 @@ async def assign_user_role(
 ):
     """Assign a role to a user."""
     try:
-        user_role = await role_service.assign_user_role(assignment_data, session)
-        return UserRoleRead.model_validate(user_role)
+        user_role = await role_service.assign_user_role(
+            assignment_data.user_id, assignment_data.role_id, session
+        )
+        # Manually validate since UserRole structure differs slightly from old UserRole
+        return UserRoleRead(
+            role_id=user_role.role_id,
+            entity_type=user_role.entity_type,
+            entity_id=user_role.entity_id
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/user/{user_id}", response_model=list[UserRoleRead])
+@router.get("/user/{user_id}", response_model=list[RoleRead])
 async def list_user_roles(
     user_id: int,
     session: AsyncSession = Depends(get_auth_session),
 ):
     """List all roles assigned to a user."""
-    user_roles = await role_service.list_user_roles(user_id, session)
-    return [UserRoleRead.model_validate(ur) for ur in user_roles]
+    roles = await role_service.list_user_roles(user_id, session)
+    return [RoleRead.model_validate(r) for r in roles]
 
 
 @router.delete("/user/{user_id}/role/{role_id}")

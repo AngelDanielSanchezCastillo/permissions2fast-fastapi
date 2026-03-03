@@ -3,12 +3,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from permissions2fast_fastapi.models.role_model import Role
-from permissions2fast_fastapi.models.role_permission_model import RolePermission
 from permissions2fast_fastapi.models.user_role_model import UserRole
-from permissions2fast_fastapi.models.user_permission_model import UserPermission
+from permissions2fast_fastapi.models.permission_category_model import PermissionCategory
+from permissions2fast_fastapi.models.permission_model import Permission
+from permissions2fast_fastapi.models.route_model import Route
+from permissions2fast_fastapi.models.permission_route_model import PermissionRoute
+from permissions2fast_fastapi.models.permission_assignment_model import PermissionAssignment
 
-# User and Role are now imported from conftest.py fixtures
-
+# User and Role are now imported from conftest.py fixtures or created here if using specific models
 
 @pytest.mark.asyncio
 async def test_create_role(session):
@@ -23,55 +25,106 @@ async def test_create_role(session):
 
 @pytest.mark.asyncio
 async def test_assign_role_to_user(session, test_user, test_role):
-    user_role = UserRole(user_id=test_user.id, role_id=test_role.id)
+    user_role = UserRole(
+        user_id=test_user.id,
+        role_id=test_role.id
+    )
     session.add(user_role)
     await session.commit()
     await session.refresh(user_role)
     
-    assert user_role.id is not None
-    assert user_role.user_id == test_user.id
     assert user_role.role_id == test_role.id
+    assert user_role.user_id == test_user.id
 
 
 @pytest.mark.asyncio
-async def test_role_permission(session, test_role):
-    perm = RolePermission(
-        role_id=test_role.id,
-        route_path="/api/test",
-        method="GET",
-        is_allowed=True
-    )
-    session.add(perm)
+async def test_create_permission_structure(session):
+    # 1. Create Category
+    category = PermissionCategory(name="User Management")
+    session.add(category)
     await session.commit()
-    await session.refresh(perm)
+    await session.refresh(category)
     
-    assert perm.id is not None
-    assert perm.role_id == test_role.id
-    assert perm.route_path == "/api/test"
+    # 2. Create Permission
+    permission = Permission(
+        name="create_user",
+        permission_category_id=category.id
+    )
+    session.add(permission)
+    await session.commit()
+    await session.refresh(permission)
+    
+    # 3. Create Route
+    route = Route(name="/api/users", is_active=True)
+    session.add(route)
+    await session.commit()
+    await session.refresh(route)
+    
+    # 4. Link Permission and Route
+    perm_route = PermissionRoute(
+        permission_id=permission.id,
+        route_id=route.id
+    )
+    session.add(perm_route)
+    await session.commit()
+    await session.refresh(perm_route)
+    
+    assert perm_route.id is not None
+    assert perm_route.permission_id == permission.id
+    assert perm_route.route_id == route.id
 
 
 @pytest.mark.asyncio
-async def test_unique_role_permission(session, test_role):
-    # Create first permission
-    perm1 = RolePermission(
-        role_id=test_role.id,
-        route_path="/api/unique",
-        method="POST",
-        is_allowed=True
-    )
-    session.add(perm1)
+async def test_assign_permission_to_role(session, test_role):
+    # Assume permission exists (mocking or creating minimal)
+    # Create required dependencies
+    category = PermissionCategory(name="Role Test Cat")
+    session.add(category)
     await session.commit()
+    await session.refresh(category)
     
-    # Try to create duplicate
-    perm2 = RolePermission(
-        role_id=test_role.id,
-        route_path="/api/unique",
-        method="POST",
-        is_allowed=False 
+    permission = Permission(name="role_permission", permission_category_id=category.id)
+    session.add(permission)
+    await session.commit()
+    await session.refresh(permission)
+    
+    # Assign to Role
+    role_perm = PermissionAssignment(
+        permission_id=permission.id,
+        entity_type="Role",
+        entity_id=test_role.id
     )
-    session.add(perm2)
+    session.add(role_perm)
+    await session.commit()
+    await session.refresh(role_perm)
     
-    with pytest.raises(IntegrityError):
-        await session.commit()
+    assert role_perm.permission_id == permission.id
+    assert role_perm.entity_type == "Role"
+    assert role_perm.entity_id == test_role.id
+
+@pytest.mark.asyncio
+async def test_assign_permission_to_user(session, test_user):
+    # Create required dependencies
+    category = PermissionCategory(name="User Test Cat")
+    session.add(category)
+    await session.commit()
+    await session.refresh(category)
     
-    await session.rollback()
+    permission = Permission(name="user_permission", permission_category_id=category.id)
+    session.add(permission)
+    await session.commit()
+    await session.refresh(permission)
+    
+    # Assign to User
+    user_perm = PermissionAssignment(
+        permission_id=permission.id,
+        entity_type="User",
+        entity_id=test_user.id
+    )
+    session.add(user_perm)
+    await session.commit()
+    await session.refresh(user_perm)
+    
+    assert user_perm.permission_id == permission.id
+    assert user_perm.entity_type == "User"
+    assert user_perm.entity_id == test_user.id

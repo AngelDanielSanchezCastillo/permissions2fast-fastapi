@@ -1,60 +1,86 @@
 """
 Permission Service
 
-Business logic for managing user-specific permissions.
+Business logic for managing permissions, categories, and user-specific assignments.
 """
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ..models.user_permission_model import UserPermission
+from ..models.permission_model import Permission
+from ..models.permission_category_model import PermissionCategory
+from ..models.permission_assignment_model import PermissionAssignment
+from ..models.permission_route_model import PermissionRoute
+from ..models.route_model import Route
 from ..schemas.permission_schema import PermissionCreate, PermissionUpdate
+from ..schemas.permission_category_schema import PermissionCategoryCreate
 
+# Categories
+
+async def create_category(
+    category_data: PermissionCategoryCreate, session: AsyncSession
+) -> PermissionCategory:
+    """Create a new permission category."""
+    category = PermissionCategory(**category_data.model_dump())
+    session.add(category)
+    try:
+        await session.commit()
+        await session.refresh(category)
+        return category
+    except IntegrityError:
+        await session.rollback()
+        raise ValueError(f"Category '{category_data.name}' already exists")
+
+async def list_categories(
+    session: AsyncSession, skip: int = 0, limit: int = 100
+) -> list[PermissionCategory]:
+    """List all categories."""
+    result = await session.execute(
+        select(PermissionCategory).offset(skip).limit(limit).order_by(PermissionCategory.name)
+    )
+    return list(result.scalars().all())
+
+# Permissions
 
 async def create_permission(
     permission_data: PermissionCreate, session: AsyncSession
-) -> UserPermission:
-    """Create a new user permission."""
-    permission = UserPermission(**permission_data.model_dump())
+) -> Permission:
+    """Create a new permission."""
+    permission = Permission(**permission_data.model_dump())
     session.add(permission)
     try:
         await session.commit()
         await session.refresh(permission)
-
-        # Note: Permission cache invalidation would be handled by app if needed
-        # from app.utils.permission_cache import invalidate_user_cache
-        # await invalidate_user_cache(permission.user_id)
-
         return permission
     except IntegrityError:
         await session.rollback()
-        raise ValueError("Permission already exists for this user/route/method")
+        raise ValueError(f"Permission '{permission_data.name}' already exists")
 
 
 async def get_permission(
     permission_id: int, session: AsyncSession
-) -> UserPermission | None:
+) -> Permission | None:
     """Get permission by ID."""
     result = await session.execute(
-        select(UserPermission).where(UserPermission.id == permission_id)
+        select(Permission).where(Permission.id == permission_id)
     )
     return result.scalar_one_or_none()
 
 
-async def list_user_permissions(
-    user_id: int, session: AsyncSession
-) -> list[UserPermission]:
-    """List all permissions for a specific user."""
+async def list_permissions(
+    session: AsyncSession, skip: int = 0, limit: int = 100
+) -> list[Permission]:
+    """List all permissions."""
     result = await session.execute(
-        select(UserPermission).where(UserPermission.user_id == user_id)
+        select(Permission).offset(skip).limit(limit).order_by(Permission.name)
     )
     return list(result.scalars().all())
 
 
 async def update_permission(
     permission_id: int, permission_data: PermissionUpdate, session: AsyncSession
-) -> UserPermission | None:
+) -> Permission | None:
     """Update a permission."""
     permission = await get_permission(permission_id, session)
     if not permission:
@@ -67,11 +93,6 @@ async def update_permission(
     session.add(permission)
     await session.commit()
     await session.refresh(permission)
-
-    # Note: Permission cache invalidation would be handled by app if needed
-    # from app.utils.permission_cache import invalidate_user_cache
-    # await invalidate_user_cache(permission.user_id)
-
     return permission
 
 
@@ -81,12 +102,96 @@ async def delete_permission(permission_id: int, session: AsyncSession) -> bool:
     if not permission:
         return False
 
-    user_id = permission.user_id
     await session.delete(permission)
     await session.commit()
+    return True
 
-    # Note: Permission cache invalidation would be handled by app if needed
-    # from app.utils.permission_cache import invalidate_user_cache
-    # await invalidate_user_cache(user_id)
+# Permission Routes
 
+async def add_permission_route(
+    permission_id: int, route_id: int, session: AsyncSession
+) -> PermissionRoute:
+    """Link a permission to a route."""
+    existing = await session.execute(
+        select(PermissionRoute).where(
+            PermissionRoute.permission_id == permission_id,
+            PermissionRoute.route_id == route_id
+        )
+    )
+    if existing.scalar_one_or_none():
+         raise ValueError("Route already assigned to permission")
+
+    perm_route = PermissionRoute(permission_id=permission_id, route_id=route_id)
+    session.add(perm_route)
+    try:
+        await session.commit()
+        await session.refresh(perm_route)
+        return perm_route
+    except IntegrityError:
+        await session.rollback()
+        raise ValueError("Error linking permission to route")
+
+# User Permissions
+
+async def assign_user_permission(
+    user_id: int, permission_id: int, session: AsyncSession
+) -> PermissionAssignment:
+    """Assign a permission directly to a user."""
+    existing = await session.execute(
+        select(PermissionAssignment).where(
+            PermissionAssignment.permission_id == permission_id,
+            PermissionAssignment.entity_type == "User",
+            PermissionAssignment.entity_id == user_id,
+        )
+    )
+    if existing.scalar_one_or_none():
+         raise ValueError("Permission already assigned to user")
+
+    model_has_perm = PermissionAssignment(
+        permission_id=permission_id,
+        entity_type="User",
+        entity_id=user_id,
+    )
+    session.add(model_has_perm)
+    try:
+        await session.commit()
+        await session.refresh(model_has_perm)
+        return model_has_perm
+    except IntegrityError:
+        await session.rollback()
+        raise ValueError("Error assigning permission to user")
+
+
+async def list_user_permissions(
+    user_id: int, session: AsyncSession
+) -> list[Permission]:
+    """List all direct permissions for a specific user."""
+    stmt = (
+        select(Permission)
+        .join(PermissionAssignment, PermissionAssignment.permission_id == Permission.id)
+        .where(
+            PermissionAssignment.entity_type == "User",
+            PermissionAssignment.entity_id == user_id
+        )
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+async def remove_user_permission(
+    user_id: int, permission_id: int, session: AsyncSession
+) -> bool:
+    """Remove a direct permission from a user."""
+    stmt = select(PermissionAssignment).where(
+        PermissionAssignment.permission_id == permission_id,
+        PermissionAssignment.entity_type == "User",
+        PermissionAssignment.entity_id == user_id,
+    )
+    result = await session.execute(stmt)
+    link = result.scalar_one_or_none()
+
+    if not link:
+        return False
+
+    await session.delete(link)
+    await session.commit()
     return True

@@ -20,15 +20,19 @@ from oauth2fast_fastapi.dependencies import get_auth_session
 from pgsqlasync2fast_fastapi.connection import get_manager
 
 # Import local package
-from permissions2fast_fastapi.routers import permissions_router, roles_router
+# Import local package
+from permissions2fast_fastapi.routers import permissions_router, roles_router, routes_router
 from permissions2fast_fastapi.utils import permission_cache
 
 # Import all models to ensure they are registered with SQLModel metadata
 from permissions2fast_fastapi.models import (
     role_model,
+    permission_model,
+    permission_category_model,
+    route_model,
     user_role_model,
-    role_permission_model,
-    user_permission_model,
+    permission_assignment_model,
+    permission_route_model,
 )
 
 # We rely on pydantic-settings to load .env automatically.
@@ -63,6 +67,9 @@ async def db_engine():
     # Create tables
     print(f"DEBUG: Creating tables for: {AuthModel.metadata.tables.keys()}")
     async with engine.begin() as conn:
+        await conn.execute(text("DROP SCHEMA public CASCADE;"))
+        await conn.execute(text("CREATE SCHEMA public;"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
         await conn.run_sync(AuthModel.metadata.create_all)
     print("DEBUG: Tables created.")
     
@@ -107,6 +114,7 @@ def app() -> FastAPI:
     app = FastAPI()
     app.include_router(permissions_router)
     app.include_router(roles_router)
+    app.include_router(routes_router)
     return app
 
 

@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from sqlmodel import SQLModel
 
 
@@ -10,7 +9,6 @@ class RoleBase(SQLModel):
 
 
 class RoleCreate(RoleBase):
-    """Create a new role. Note: tenant_id will be added by tenant2fast_fastapi."""
     pass
 
 
@@ -21,39 +19,22 @@ class RoleUpdate(SQLModel):
 
 
 class RoleRead(RoleBase):
-    """Role read schema. Note: tenant_id will be added by tenant2fast_fastapi."""
     id: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
+# Assignment Schemas
 
-
-class RolePermissionBase(SQLModel):
-    route_path: str
-    method: str = "*"
-    is_allowed: bool = True
-    expires_at: datetime | None = None
-
-
-class RolePermissionCreate(RolePermissionBase):
-    role_id: int
-
-
-class RolePermissionRead(RolePermissionBase):
-    id: int
-    role_id: int
-    created_at: datetime
-    updated_at: datetime
-
+class RolePermissionCreate(SQLModel):
+    permission_id: int
 
 class UserRoleCreate(SQLModel):
     user_id: int
     role_id: int
 
-
 class UserRoleRead(SQLModel):
-    id: int
-    user_id: int
+    # Just return relationships or success status?
+    # Usually we might return the created link, but let's stick to what we have in service
     role_id: int
-    created_at: datetime
-    updated_at: datetime
+    entity_type: str
+    entity_id: int

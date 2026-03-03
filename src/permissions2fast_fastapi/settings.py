@@ -37,6 +37,10 @@ class PermissionsSettings(BaseSettings):
     # Redis settings for caching permissions
     redis: RedisSettings = RedisSettings()
     
+    # Feature flags for multi-tenancy and advanced caching
+    enable_tenancy: bool = False
+    redis_rbac_enabled: bool = False
+    
     # Cache settings
     cache_ttl_seconds: int = 300  # 5 minutes default
 

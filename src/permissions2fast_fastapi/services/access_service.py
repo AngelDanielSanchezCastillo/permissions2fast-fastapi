@@ -1,118 +1,110 @@
 """
 Access Service
 
-Handles high-level access control logic, caching, and permission aggregation.
+Handles high-level access control logic and permission checking.
 """
 
-from datetime import datetime
-
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, union
 
-from ..models.role_permission_model import RolePermission
-from ..models.user_permission_model import UserPermission
+from ..models.permission_assignment_model import PermissionAssignment
 from ..models.user_role_model import UserRole
-from ..utils import permission_cache
+from ..models.permission_route_model import PermissionRoute
+from ..models.route_model import Route
 
-
-async def get_all_user_permissions(
-    user_id: int, session: AsyncSession
-) -> list[dict]:
-    """
-    Fetch all effective permissions for a user from the database.
-    Aggregates:
-    1. Direct user permissions (UserPermission) - Highest priority
-    2. Permissions from assigned roles (RolePermission)
-    """
-    permissions = []
-    
-    # 1. Fetch direct user permissions
-    user_perms_result = await session.execute(
-        select(UserPermission).where(UserPermission.user_id == user_id)
-    )
-    user_perms = user_perms_result.scalars().all()
-    
-    for perm in user_perms:
-        permissions.append({
-            "route_path": perm.route_path,
-            "method": perm.method,
-            "is_allowed": perm.is_allowed,
-            "expires_at": perm.expires_at.isoformat() if perm.expires_at else None,
-            "source": "user",  # Metadata
-        })
-
-    # 2. Fetch permissions from user's roles
-    # Join UserRole -> RolePermission
-    role_perms_result = await session.execute(
-        select(RolePermission)
-        .join(UserRole, UserRole.role_id == RolePermission.role_id)
-        .where(UserRole.user_id == user_id)
-    )
-    role_perms = role_perms_result.scalars().all()
-
-    for perm in role_perms:
-        # Avoid duplicates if overridden by user permission? 
-        # For now, we add all. The checker needs to handle priority if conflicts exist.
-        # But a simple list check might find the first match. 
-        # To handle priority properly, we should probably deduplicate or sort.
-        # User permissions should come first in the list if the checker stops at first match.
-        permissions.append({
-            "route_path": perm.route_path,
-            "method": perm.method,
-            "is_allowed": perm.is_allowed,
-            "expires_at": perm.expires_at.isoformat() if perm.expires_at else None,
-            "source": "role",
-        })
-
-    return permissions
-
+from ..settings import settings
+from ..utils.redis_client import get_cached_permissions, set_cached_permissions
+from ..models.user_tenant_role_model import UserTenantRole
 
 async def check_user_access(
-    user_id: int, route_path: str, method: str, session: AsyncSession
+    user_id: int, route_path: str, method: str, session: AsyncSession, tenant_id: int | None = None
 ) -> bool:
     """
-    Check if a user has access to a specific route and method.
-    Uses caching for performance.
+    Check if a user has access to a specific route.
     
-    Logic:
-    1. Check Redis cache.
-    2. If not cached, fetch from DB.
-    3. Cache the result.
-    4. Perform the check.
+    Args:
+        user_id: The ID of the user.
+        route_path: The request path.
+        method: The HTTP method (Ignored in this schema v1 as not in DB).
+        session: DB session.
     
     Returns:
-        bool: True if allowed, False otherwise.
+        bool: True if allowed.
     """
-    # 1. Try cache
-    is_allowed = await permission_cache.check_route_access(user_id, route_path, method)
     
-    if is_allowed is not None:
-        return is_allowed
+    # 1. Check if route exists and requires validation
+    # We strip trailing slash for consistency if needed, but strict match for now
+    route_result = await session.execute(
+        select(Route).where(Route.name == route_path)
+    )
+    route = route_result.scalar_one_or_none()
+    
+    # If route doesn't exist in DB, decide default behavior.
+    # Usually if it's not registered, we might deny or allow. 
+    # Let's assume strict: if not in Routes, Deny (or it's a 404 handled by FastAPI).
+    # But often middleware calls this. If unknown route, maybe allow? 
+    # Safest is Deny. But if the user didn't populate routes, everything breaks.
+    # Let's assume if route is not tracked, we might return False (Deny) 
+    # OR we return True if we only secure explicit routes.
+    if not route:
+        # Default policy: Deny unknown routes? Or Allow?
+        # Given "validate" field exists, I assume we only validate tracked routes.
+        # If I return False, users can't access anything unless they seed routes.
+        # This is safe but annoying.
+        # However, for this task, let's return False to be secure.
+        return False
 
-    # 2. Cache miss - Fetch from DB
-    permissions = await get_all_user_permissions(user_id, session)
-    
-    # 3. Populate cache
-    await permission_cache.cache_user_permissions(user_id, permissions)
-    
-    # 4. Check again (using the logic in permission_cache.check_route_access but locally)
-    # We can just call the cache check again since it's now populated, 
-    # OR replicate the logic to save a round trip if we just wrote it.
-    # But for consistency, let's look at the fetched permissions directly.
-    
-    for perm in permissions:
-        if perm["route_path"] == route_path:
-            if perm["method"] in (method, "*"):
-                 # Check expiration
-                if perm["expires_at"]:
-                    try:
-                        expires = datetime.fromisoformat(perm["expires_at"])
-                        if datetime.utcnow() > expires:
-                            continue
-                    except ValueError:
-                        continue
-                
-                return perm["is_allowed"]
+    if not route.is_active:
+        return True
 
-    # Default deny if no permission explicitly matches
-    return False
+    # 2. Redis Cache Check
+    if route.name:
+        cached_routes = await get_cached_permissions(user_id, tenant_id)
+        if cached_routes is not None:
+            # Cache Hit!
+            return route.name in cached_routes
+
+    # 3. Database Check (Cache Miss)
+    if settings.enable_tenancy and tenant_id is not None:
+        # Tenancy Mode: query via UserTenantRole
+        role_perms = (
+            select(PermissionAssignment.permission_id)
+            .join(UserTenantRole, UserTenantRole.role_id == PermissionAssignment.entity_id)
+            .where(
+                UserTenantRole.user_id == user_id,
+                UserTenantRole.tenant_id == tenant_id,
+                PermissionAssignment.entity_type == "Role"
+            )
+        )
+        user_perm_ids_query = role_perms.subquery()
+    else:
+        # Global Mode: query via UserRole and direct PermissionAssignment
+        direct_perms = (
+            select(PermissionAssignment.permission_id)
+            .where(
+                PermissionAssignment.entity_type == "User",
+                PermissionAssignment.entity_id == user_id
+            )
+        )
+        role_perms = (
+            select(PermissionAssignment.permission_id)
+            .join(UserRole, (UserRole.role_id == PermissionAssignment.entity_id) & (PermissionAssignment.entity_type == "Role"))
+            .where(
+                UserRole.user_id == user_id
+            )
+        )
+        user_perm_ids_query = union(direct_perms, role_perms).subquery()
+
+    # Get allowed routes for these permissions
+    stmt = (
+        select(Route.name)
+        .join(PermissionRoute, PermissionRoute.route_id == Route.id)
+        .where(PermissionRoute.permission_id.in_(select(user_perm_ids_query)))
+    )
+    result = await session.execute(stmt)
+    allowed_route_names = list(result.scalars().all())
+
+    # 4. Cache the result for future requests
+    await set_cached_permissions(user_id, tenant_id, allowed_route_names)
+
+    return route.name in allowed_route_names

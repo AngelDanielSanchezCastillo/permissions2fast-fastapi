@@ -7,17 +7,23 @@ permission assignment, and user-role management.
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, delete
 
 from ..models.role_model import Role
-from ..models.role_permission_model import RolePermission
 from ..models.user_role_model import UserRole
+from ..models.permission_assignment_model import PermissionAssignment
+from ..models.permission_model import Permission
+from ..models.user_tenant_role_model import UserTenantRole
+from ..settings import settings
+from ..utils.redis_client import invalidate_user_cache
 from ..schemas.role_schema import (
     RoleCreate,
-    RolePermissionCreate,
     RoleUpdate,
-    UserRoleCreate,
+    # UserRoleCreate, # We might need to handle this via schema or arguments
 )
+
+# We define local types or reuse schemas where appropriate
+# For assign_user_role, we can take user_id and role_id directly or use a schema
 
 
 async def create_role(role_data: RoleCreate, session: AsyncSession) -> Role:
@@ -30,7 +36,7 @@ async def create_role(role_data: RoleCreate, session: AsyncSession) -> Role:
         return role
     except IntegrityError:
         await session.rollback()
-        raise ValueError(f"Role '{role_data.name}' already exists for this tenant")
+        raise ValueError(f"Role '{role_data.name}' already exists")
 
 
 async def get_role(role_id: int, session: AsyncSession) -> Role | None:
@@ -78,165 +84,173 @@ async def delete_role(role_id: int, session: AsyncSession) -> bool:
     return True
 
 
-# Role Permissions
+# Role Permissions (PermissionAssignment where entity_type='Role')
 
 
 async def add_role_permission(
-    perm_data: RolePermissionCreate, session: AsyncSession
-) -> RolePermission:
+    role_id: int, permission_id: int, session: AsyncSession
+) -> PermissionAssignment:
     """Add a permission to a role."""
-    permission = RolePermission(**perm_data.model_dump())
-    session.add(permission)
+    # Check if exists
+    existing = await session.execute(
+        select(PermissionAssignment).where(
+            PermissionAssignment.permission_id == permission_id,
+            PermissionAssignment.entity_type == "Role",
+            PermissionAssignment.entity_id == role_id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise ValueError("Permission already assigned to this role")
+
+    model_has_permission = PermissionAssignment(
+        permission_id=permission_id,
+        entity_type="Role",
+        entity_id=role_id,
+    )
+    session.add(model_has_permission)
     try:
         await session.commit()
-        await session.refresh(permission)
-        return permission
-    except IntegrityError:
+        await session.refresh(model_has_permission)
+        return model_has_permission
+    except IntegrityError: # Should be caught by check above usually
         await session.rollback()
-        raise ValueError("This permission already exists for this role")
+        raise ValueError("Error assigning permission to role")
 
 
 async def list_role_permissions(
     role_id: int, session: AsyncSession
-) -> list[RolePermission]:
+) -> list[Permission]:
     """List all permissions for a role."""
-    result = await session.execute(
-        select(RolePermission).where(RolePermission.role_id == role_id)
+    # Join PermissionAssignment with Permission
+    stmt = (
+        select(Permission)
+        .join(PermissionAssignment, PermissionAssignment.permission_id == Permission.id)
+        .where(
+            PermissionAssignment.entity_type == "Role",
+            PermissionAssignment.entity_id == role_id,
+        )
     )
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
-async def delete_role_permission(permission_id: int, session: AsyncSession) -> bool:
+async def delete_role_permission(
+    role_id: int, permission_id: int, session: AsyncSession
+) -> bool:
     """Delete a role permission."""
-    result = await session.execute(
-        select(RolePermission).where(RolePermission.id == permission_id)
+    stmt = select(PermissionAssignment).where(
+        PermissionAssignment.permission_id == permission_id,
+        PermissionAssignment.entity_type == "Role",
+        PermissionAssignment.entity_id == role_id,
     )
-    permission = result.scalar_one_or_none()
+    result = await session.execute(stmt)
+    link = result.scalar_one_or_none()
 
-    if not permission:
+    if not link:
         return False
 
-    await session.delete(permission)
+    await session.delete(link)
     await session.commit()
     return True
 
 
-# User Roles
+# User Roles (UserRole where entity_type='User')
 
 
 async def assign_user_role(
-    assignment_data: UserRoleCreate, session: AsyncSession
-) -> UserRole:
+    user_id: int, role_id: int, session: AsyncSession, tenant_id: int | None = None
+) -> UserRole | UserTenantRole:
     """Assign a role to a user."""
-    user_role = UserRole(**assignment_data.model_dump())
+    if settings.enable_tenancy and tenant_id is not None:
+        # Check if exists in UserTenantRole
+        existing = await session.execute(
+            select(UserTenantRole).where(
+                UserTenantRole.role_id == role_id,
+                UserTenantRole.user_id == user_id,
+                UserTenantRole.tenant_id == tenant_id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise ValueError("User already has this role in the specified tenant")
+
+        user_role = UserTenantRole(
+            role_id=role_id,
+            user_id=user_id,
+            tenant_id=tenant_id,
+        )
+    else:
+        # Check if exists in global UserRole
+        existing = await session.execute(
+            select(UserRole).where(
+                UserRole.role_id == role_id,
+                UserRole.user_id == user_id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise ValueError("User already has this global role")
+
+        user_role = UserRole(
+            role_id=role_id,
+            user_id=user_id,
+        )
+
     session.add(user_role)
     try:
         await session.commit()
         await session.refresh(user_role)
-
-        # Note: Permission cache invalidation would be handled by app if needed
-        # from app.utils.permission_cache import invalidate_user_cache
-        # await invalidate_user_cache(assignment_data.user_id)
-
+        # Invalidate cache
+        await invalidate_user_cache(user_id)
         return user_role
     except IntegrityError:
         await session.rollback()
-        raise ValueError("User already has this role")
+        raise ValueError("Error assigning role to user")
 
 
-async def list_user_roles(user_id: int, session: AsyncSession) -> list[UserRole]:
+async def list_user_roles(user_id: int, session: AsyncSession, tenant_id: int | None = None) -> list[Role]:
     """List all roles assigned to a user."""
-    result = await session.execute(select(UserRole).where(UserRole.user_id == user_id))
+    if settings.enable_tenancy and tenant_id is not None:
+        stmt = (
+            select(Role)
+            .join(UserTenantRole, UserTenantRole.role_id == Role.id)
+            .where(
+                UserTenantRole.user_id == user_id,
+                UserTenantRole.tenant_id == tenant_id
+            )
+        )
+    else:
+        stmt = (
+            select(Role)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(
+                UserRole.user_id == user_id
+            )
+        )
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
-async def remove_user_role(user_id: int, role_id: int, session: AsyncSession) -> bool:
+async def remove_user_role(user_id: int, role_id: int, session: AsyncSession, tenant_id: int | None = None) -> bool:
     """Remove a role from a user."""
-    result = await session.execute(
-        select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
-    )
-    user_role = result.scalar_one_or_none()
+    if settings.enable_tenancy and tenant_id is not None:
+        stmt = select(UserTenantRole).where(
+            UserTenantRole.role_id == role_id,
+            UserTenantRole.user_id == user_id,
+            UserTenantRole.tenant_id == tenant_id,
+        )
+    else:
+        stmt = select(UserRole).where(
+            UserRole.role_id == role_id,
+            UserRole.user_id == user_id,
+        )
+        
+    result = await session.execute(stmt)
+    link = result.scalar_one_or_none()
 
-    if not user_role:
+    if not link:
         return False
 
-    await session.delete(user_role)
+    await session.delete(link)
     await session.commit()
-
-    # Note: Permission cache invalidation would be handled by app if needed
-    # from app.utils.permission_cache import invalidate_user_cache
-    # await invalidate_user_cache(user_id)
-
+    # Invalidate cache
+    await invalidate_user_cache(user_id)
     return True
-
-
-# Seed Data
-
-
-async def create_default_roles(session: AsyncSession) -> dict[str, Role]:
-    """
-    Create default roles.
-    Returns dict with role names as keys.
-    Note: tenant_id will be added by tenant2fast_fastapi module.
-    """
-    roles = {}
-
-    # Admin role - full access
-    admin = await create_role(
-        RoleCreate(
-            name="Admin",
-            description="Full system access",
-        ),
-        session,
-    )
-    roles["admin"] = admin
-
-    # Add admin permissions
-    await add_role_permission(
-        RolePermissionCreate(
-            role_id=admin.id, route_path="/api/v1/*", method="*", is_allowed=True
-        ),
-        session,
-    )
-
-    # Editor role - read and write
-    editor = await create_role(
-        RoleCreate(
-            name="Editor",
-            description="Can read and modify data",
-        ),
-        session,
-    )
-    roles["editor"] = editor
-
-    # Add editor permissions
-    for method in ["GET", "POST", "PUT"]:
-        await add_role_permission(
-            RolePermissionCreate(
-                role_id=editor.id,
-                route_path="/api/v1/*",
-                method=method,
-                is_allowed=True,
-            ),
-            session,
-        )
-
-    # Viewer role - read only
-    viewer = await create_role(
-        RoleCreate(
-            name="Viewer",
-            description="Read-only access",
-        ),
-        session,
-    )
-    roles["viewer"] = viewer
-
-    # Add viewer permissions
-    await add_role_permission(
-        RolePermissionCreate(
-            role_id=viewer.id, route_path="/api/v1/*", method="GET", is_allowed=True
-        ),
-        session,
-    )
-
-    return roles

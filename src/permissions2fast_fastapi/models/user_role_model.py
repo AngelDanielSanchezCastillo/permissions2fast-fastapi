@@ -1,26 +1,12 @@
-from sqlalchemy import Index
-from sqlmodel import BigInteger, Column, Field, ForeignKey
-
+from sqlmodel import Field, SQLModel
 from oauth2fast_fastapi.models import AuthModel
-
 
 class UserRole(AuthModel, table=True):
     """
-    Many-to-many relationship between Users and Roles.
-    A user can have multiple roles.
+    User Role mapping for RBAC.
+    Description: Maps users to their assigned roles.
     """
+    __tablename__ = "user_role"
 
-    __tablename__ = "user_roles"
-
-    id: int = Field(
-        default=None, sa_column=Column(BigInteger, index=True, primary_key=True)
-    )
-    user_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
-    )
-    role_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("roles.id", ondelete="CASCADE"))
-    )
-
-    # Ensure a user can't have the same role twice
-    __table_args__ = (Index("ix_user_role", "user_id", "role_id", unique=True),)
+    role_id: int = Field(primary_key=True, foreign_key="roles.id")
+    user_id: int = Field(primary_key=True, index=True, foreign_key="users.id")

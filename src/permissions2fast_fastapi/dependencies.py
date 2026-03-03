@@ -10,15 +10,15 @@ from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import from oauth2fast-fastapi directly
-from oauth2fast_fastapi.dependencies import get_current_active_user, get_auth_session
-from oauth2fast_fastapi.models import User
+from oauth2fast_fastapi.dependencies import get_current_verified_user, get_auth_session
+from oauth2fast_fastapi import User
 
 from .services import access_service, role_service
 
 
-async def has_role(
+def has_role(
     role_name: str,
-) -> Annotated[User, Depends]:
+):
     """
     Dependency to require a specific role.
     
@@ -28,35 +28,16 @@ async def has_role(
             ...
     """
     async def _has_role(
-        user: Annotated[User, Depends(get_current_active_user)],
+        request: Request,
+        user: Annotated[User, Depends(get_current_verified_user)],
         session: Annotated[AsyncSession, Depends(get_auth_session)],
     ) -> User:
-        user_roles = await role_service.list_user_roles(user.id, session)
+        tenant_id = get_tenant_id(request)
+        user_roles = await role_service.list_user_roles(user.id, session, tenant_id=tenant_id)
         
-        # We need to fetch the role names. UserRole only has role_id.
-        # This is a bit inefficient (N+1), but simple.
-        # Ideally role_service.list_user_roles would join with Role.
+        has_required = any(r.name == role_name for r in user_roles)
         
-        # Better approach: check if any assigned role matches the name
-        # We can do this efficiently in the service but for now let's use what we have
-        # or implement a specific check in role_service.
-        
-        # Let's iterate and fetch logic for now, or assume we know the mapping.
-        # Actually, let's optimize this lookup by checking Role table.
-        
-        from sqlmodel import select
-        from .models.role_model import Role
-        from .models.user_role_model import UserRole
-        
-        result = await session.execute(
-            select(Role)
-            .join(UserRole, UserRole.role_id == Role.id)
-            .where(UserRole.user_id == user.id)
-            .where(Role.name == role_name)
-        )
-        role = result.scalar_one_or_none()
-        
-        if not role:
+        if not has_required:
              raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Missing required role: {role_name}",
@@ -67,10 +48,39 @@ async def has_role(
     return _has_role
 
 
-async def has_permission(
+def get_tenant_id(request: Request) -> int | None:
+    """
+    Extract tenant_id from request.
+    Priority:
+    1. request.state.tenant_id (injected by external middleware)
+    2. X-Tenant-ID header
+    """
+    from .settings import settings
+    if not settings.enable_tenancy:
+        return None
+
+    # First check state (injected by middleware)
+    if hasattr(request.state, "tenant_id") and request.state.tenant_id:
+        try:
+            return int(request.state.tenant_id)
+        except ValueError:
+            pass
+
+    # Fallback to header
+    header_tenant = request.headers.get("X-Tenant-ID")
+    if header_tenant:
+         try:
+             return int(header_tenant)
+         except ValueError:
+             pass
+             
+    return None
+
+
+def has_permission(
     permission_route: str | None = None,
     method: str | None = None,
-) -> Annotated[User, Depends]:
+):
     """
     Dependency to require permission for a route.
     
@@ -88,15 +98,18 @@ async def has_permission(
     """
     async def _has_permission(
         request: Request,
-        user: Annotated[User, Depends(get_current_active_user)],
+        user: Annotated[User, Depends(get_current_verified_user)],
         session: Annotated[AsyncSession, Depends(get_auth_session)],
     ) -> User:
         # Determine what to check
         route_to_check = permission_route or request.url.path
         method_to_check = method or request.method
         
+        # Extract tenant context
+        tenant_id = get_tenant_id(request)
+        
         is_allowed = await access_service.check_user_access(
-            user.id, route_to_check, method_to_check, session
+            user.id, route_to_check, method_to_check, session, tenant_id=tenant_id
         )
         
         if not is_allowed:

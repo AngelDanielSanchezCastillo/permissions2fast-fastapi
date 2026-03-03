@@ -1,14 +1,10 @@
 from datetime import datetime
-
 from sqlmodel import SQLModel
 
 
 class PermissionBase(SQLModel):
-    user_id: int
-    route_path: str
-    method: str = "*"
-    is_allowed: bool = True
-    expires_at: datetime | None = None
+    name: str
+    permission_category_id: int
 
 
 class PermissionCreate(PermissionBase):
@@ -16,13 +12,24 @@ class PermissionCreate(PermissionBase):
 
 
 class PermissionUpdate(SQLModel):
-    route_path: str | None = None
-    method: str | None = None
-    is_allowed: bool | None = None
-    expires_at: datetime | None = None
+    name: str | None = None
+    permission_category_id: int | None = None
 
 
 class PermissionRead(PermissionBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
+
+# Assignment Schemas
+
+class PermissionRouteCreate(SQLModel):
+    permission_id: int
+    route_id: int
+
+class UserPermissionCreate(SQLModel):
+    user_id: int
+    permission_id: int
+
+class UserPermissionRead(SQLModel):
+    permission_id: int
+    entity_type: str
+    entity_id: int
