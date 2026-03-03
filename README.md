@@ -2,14 +2,16 @@
 
 🔒 Role-Based Access Control (RBAC) extension for `oauth2fast-fastapi`.
 
-Easily manage user roles and permissions in your FastAPI application.
+Easily manage user roles and permissions in your FastAPI application with support for Multi-Tenancy and High-Performance Redis Caching.
 
 ## Features
 
-- 👥 **Role Management**: Create, assign, and manage roles.
-- 🔑 **Granular Permissions**: Define specific permissions and assign them to roles.
-- 🛡️ **Route Protection**: Dependencies to protect endpoints based on roles or permissions.
-- ⚡ **Async Support**: Fully async database interactions.
+- 👥 **Role Management**: Create, assign, and manage roles for users.
+- 🔑 **Granular Permissions**: Define specific permissions and assign them to roles or directly to users (polymorphic assignments).
+- 🏢 **Multi-Tenancy (Optional)**: Isolate roles and permissions per tenant context.
+- � **Redis Caching (Optional)**: High-performance permission evaluation using Redis to minimize database lookups.
+- �🛡️ **Route Protection**: Dependencies to protect endpoints based on roles or permissions.
+- ⚡ **Async Support**: Fully async database interactions via `pgsqlasync2fast-fastapi`.
 - 🔌 **Seamless Integration**: Built to extend `oauth2fast-fastapi`.
 
 ## Installation
@@ -20,25 +22,32 @@ pip install permissions2fast-fastapi
 
 ## Configuration
 
-This package uses the same database configuration as `oauth2fast-fastapi`. Ensure your `.env` file is configured correctly.
+This package uses the same database connection logic as `oauth2fast-fastapi`. Configure your environment variables in `.env`.
 
-### Database Settings (Shared with Auth)
+### Basic Settings
+
 ```bash
-AUTH_DB__USERNAME=postgres
-AUTH_DB__PASSWORD=yourpassword
-AUTH_DB__HOSTNAME=localhost
-AUTH_DB__NAME=myapp_db
-AUTH_DB__PORT=5432
+# Database Configuration
+DB_CONNECTIONS__AUTH__USERNAME=db_user
+DB_CONNECTIONS__AUTH__PASSWORD=db_password
+DB_CONNECTIONS__AUTH__HOST=localhost
+DB_CONNECTIONS__AUTH__DATABASE=db_name
+DB_CONNECTIONS__AUTH__PORT=5432
 ```
 
-### Redis Settings (Specific to Permissions)
-This package uses Redis for caching permissions. You can use the same Redis server as other modules (like mailing) but specify a different database if needed.
+### Advanced Features (Multi-Tenancy & Redis)
+
+You can enable multi-tenancy and Redis caching by setting the following environment variables:
 
 ```bash
+PERMISSIONS_ENABLE_TENANCY=True
+PERMISSIONS_REDIS_RBAC_ENABLED=True
+
+# Redis connection details (if caching is enabled)
 PERMISSIONS_REDIS__HOST=localhost
 PERMISSIONS_REDIS__PORT=6379
-PERMISSIONS_REDIS__DB=0  # Can be different from mailing DB
-PERMISSIONS_REDIS__PASSWORD=yourredispassword
+PERMISSIONS_REDIS__DB=0
+# PERMISSIONS_REDIS__PASSWORD=your_redis_password
 ```
 
 ## Usage
@@ -59,7 +68,7 @@ app.include_router(roles_router)
 
 ### 2. Protecting Routes
 
-Use the provided dependencies to restrict access to endpoints.
+Use the provided dependencies to restrict access to endpoints. The system will automatically check Redis cache if enabled, and fallback to database queries if needed. Tenant context is automatically respected if Tenancy is enabled and a Tenant ID is injected in the request context.
 
 ```python
 from fastapi import Depends
