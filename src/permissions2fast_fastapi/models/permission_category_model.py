@@ -13,5 +13,7 @@ class PermissionCategory(AuthModel, table=True):
 
     name: str = Field(index=True, unique=True)
     
+    id: Optional[int] = Field(default=None, primary_key=True)
+
     # Relationships
-    permissions: List["Permission"] = Relationship(back_populates="category")
+    #permissions: List["Permission"] = Relationship(back_populates="category")

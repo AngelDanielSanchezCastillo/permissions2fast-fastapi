@@ -9,6 +9,7 @@ class Tenant(AuthModel, table=True):
     """
     __tablename__ = "tenants"
 
+    id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     schema_name: str | None = Field(default=None, description="DB Schema name if applicable")
     db_url: str | None = Field(default=None, description="External DB URL if applicable")

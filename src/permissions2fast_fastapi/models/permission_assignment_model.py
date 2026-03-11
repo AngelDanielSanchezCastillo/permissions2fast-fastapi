@@ -8,10 +8,7 @@ class PermissionAssignment(AuthModel, table=True):
     """
     __tablename__ = "permission_assignments"
 
-    permission_id: int = Field(foreign_key="permissions.id", index=True)
-    entity_type: str = Field(index=True) # e.g., "User", "Team"
-    entity_id: int = Field(index=True)
+    permission_id: int = Field(primary_key=True, foreign_key="permissions.id")
+    entity_type: str = Field(primary_key=True, index=True) # e.g., "User", "Team"
+    entity_id: int = Field(primary_key=True, index=True)
 
-    __table_args__ = (
-        UniqueConstraint("permission_id", "entity_type", "entity_id", name="uq_permission_assignment"),
-    )

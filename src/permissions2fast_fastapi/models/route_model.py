@@ -10,8 +10,9 @@ class Route(AuthModel, table=True):
     """
     __tablename__ = "routes"
 
+    id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True, unique=True) # The path
     is_active: bool = Field(default=True)
 
     # Relación Many-to-Many hacia Permission a través de PermissionRoute
-    permissions: List["Permission"] = Relationship(back_populates="routes", link_model=PermissionRoute)
+    #permissions: List["Permission"] = Relationship(back_populates="routes", link_model=PermissionRoute)

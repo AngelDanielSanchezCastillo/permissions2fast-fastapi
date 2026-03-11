@@ -12,10 +12,13 @@ class Role(AuthModel, table=True):
 
     __tablename__ = "roles"
 
+    id: int = Field(
+        default=None, sa_column=Column(BigInteger, index=True, primary_key=True)
+    )
     name: str = Field(index=True, unique=True)
     description: str | None = Field(default=None)
     is_active: bool = Field(default=True)
 
     # Relación Many-to-Many hacia User a través de UserRol
-    users: List["User"] = Relationship(back_populates="roles", link_model=UserRole)
+    #users: List["User"] = Relationship(back_populates="roles", link_model=UserRole)
 
