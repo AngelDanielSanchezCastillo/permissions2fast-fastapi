@@ -27,16 +27,23 @@ classifiers = [
 ]
 
 dependencies = [
-    "oauth2fast-fastapi>=0.2.2",
+    "oauth2fast-fastapi>=0.2.3",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "black",
+    "ruff",
+    "mypy>=1.0.0",
+    "pre-commit",
+    "build",
+    "twine",
+]
+test = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
     "httpx>=0.24.0",
-    "mypy>=1.0.0",
     "python-dotenv>=1.0.0",
 ]
 

@@ -9,7 +9,6 @@ class UserTenantRole(AuthModel, table=True):
     """
     __tablename__ = "user_tenant_roles"
 
-    id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(index=True, foreign_key="users.id")
     tenant_id: int = Field(foreign_key="tenants.id", index=True)
     role_id: int = Field(foreign_key="roles.id", index=True)

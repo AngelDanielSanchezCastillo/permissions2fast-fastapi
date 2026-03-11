@@ -1,4 +1,4 @@
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, UniqueConstraint
 from oauth2fast_fastapi.models import AuthModel
 
 class UserRole(AuthModel, table=True):
@@ -8,5 +8,9 @@ class UserRole(AuthModel, table=True):
     """
     __tablename__ = "user_role"
 
-    role_id: int = Field(primary_key=True, foreign_key="roles.id")
-    user_id: int = Field(primary_key=True, index=True, foreign_key="users.id")
+    role_id: int = Field(foreign_key="roles.id", index=True)
+    user_id: int = Field(index=True, foreign_key="users.id")
+
+    __table_args__ = (
+        UniqueConstraint("role_id", "user_id", name="uq_user_role"),
+    )
