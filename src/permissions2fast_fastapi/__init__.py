@@ -5,7 +5,7 @@ Complete RBAC (Role-Based Access Control) system for FastAPI applications.
 Provides role management, permission checking, and user-role assignments.
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from .models.role_model import Role
 from .models.permission_model import Permission

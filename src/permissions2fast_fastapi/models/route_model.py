@@ -1,5 +1,5 @@
 from sqlmodel import Field, SQLModel, Relationship
-from typing import List
+from typing import Optional, List
 from oauth2fast_fastapi.models import AuthModel
 from .permission_route_model import PermissionRoute
 
