@@ -1,7 +1,5 @@
-from sqlmodel import BigInteger, Column, Field, SQLModel, Relationship
-from typing import List
+from sqlmodel import Field
 from oauth2fast_fastapi.models import AuthModel
-from .user_role_model import UserRole
 
 
 class Role(AuthModel, table=True):
@@ -12,13 +10,11 @@ class Role(AuthModel, table=True):
 
     __tablename__ = "roles"
 
-    id: int = Field(
-        default=None, sa_column=Column(BigInteger, index=True, primary_key=True)
-    )
     name: str = Field(index=True, unique=True)
     description: str | None = Field(default=None)
     is_active: bool = Field(default=True)
 
-    # Relación Many-to-Many hacia User a través de UserRol
-    #users: List["User"] = Relationship(back_populates="roles", link_model=UserRole)
-
+    # Nota: la relación Many-to-Many con User se hace a través de UserRole,
+    # pero NO se puede declarar Relationship aquí porque oauth2fast_fastapi.User
+    # es un modelo externo sin back_populates="roles". Para consultar usuarios
+    # de un rol usa: select(User).join(UserRole).where(UserRole.role_id == role.id)
