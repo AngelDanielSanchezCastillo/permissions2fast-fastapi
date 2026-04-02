@@ -2,13 +2,12 @@
 
 🔒 Role-Based Access Control (RBAC) extension for `oauth2fast-fastapi`.
 
-Easily manage user roles and permissions in your FastAPI application with support for Multi-Tenancy and High-Performance Redis Caching.
+Easily manage user roles and permissions in your FastAPI application with support for High-Performance Redis Caching.
 
 ## Features
 
 - 👥 **Role Management**: Create, assign, and manage roles for users.
 - 🔑 **Granular Permissions**: Define specific permissions and assign them to roles or directly to users (polymorphic assignments).
-- 🏢 **Multi-Tenancy (Optional)**: Isolate roles and permissions per tenant context.
 - � **Redis Caching (Optional)**: High-performance permission evaluation using Redis to minimize database lookups.
 - �🛡️ **Route Protection**: Dependencies to protect endpoints based on roles or permissions.
 - ⚡ **Async Support**: Fully async database interactions via `pgsqlasync2fast-fastapi`.
@@ -35,12 +34,11 @@ DB_CONNECTIONS__AUTH__DATABASE=db_name
 DB_CONNECTIONS__AUTH__PORT=5432
 ```
 
-### Advanced Features (Multi-Tenancy & Redis)
+### Advanced Features (Redis)
 
-You can enable multi-tenancy and Redis caching by setting the following environment variables:
+You can enable Redis caching by setting the following environment variables:
 
 ```bash
-PERMISSIONS_ENABLE_TENANCY=True
 PERMISSIONS_REDIS_RBAC_ENABLED=True
 
 # Redis connection details (if caching is enabled)
@@ -68,7 +66,7 @@ app.include_router(roles_router)
 
 ### 2. Protecting Routes
 
-Use the provided dependencies to restrict access to endpoints. The system will automatically check Redis cache if enabled, and fallback to database queries if needed. Tenant context is automatically respected if Tenancy is enabled and a Tenant ID is injected in the request context.
+Use the provided dependencies to restrict access to endpoints. The system will automatically check Redis cache if enabled, and fallback to database queries if needed.
 
 ```python
 from fastapi import Depends

@@ -31,14 +31,13 @@ async def close_redis() -> None:
         _redis_client = None
 
 
-async def get_cached_permissions(user_id: int, tenant_id: int | str | None) -> list[str] | None:
-    """Get cached permissions for a user within a tenant context."""
+async def get_cached_permissions(user_id: int) -> list[str] | None:
+    """Get cached permissions for a user."""
     if not settings.redis_rbac_enabled:
         return None
         
     client = get_redis_client()
-    tenant_part = str(tenant_id) if tenant_id is not None else "global"
-    key = f"rbac:{user_id}:{tenant_part}"
+    key = f"rbac:{user_id}:global"
     
     data = await client.get(key)
     if data:
@@ -49,14 +48,13 @@ async def get_cached_permissions(user_id: int, tenant_id: int | str | None) -> l
     return None
 
 
-async def set_cached_permissions(user_id: int, tenant_id: int | str | None, permissions: list[str]) -> None:
-    """Set cached permissions for a user within a tenant context."""
+async def set_cached_permissions(user_id: int, permissions: list[str]) -> None:
+    """Set cached permissions for a user."""
     if not settings.redis_rbac_enabled:
         return
         
     client = get_redis_client()
-    tenant_part = str(tenant_id) if tenant_id is not None else "global"
-    key = f"rbac:{user_id}:{tenant_part}"
+    key = f"rbac:{user_id}:global"
     
     await client.setex(
         key,
@@ -66,7 +64,7 @@ async def set_cached_permissions(user_id: int, tenant_id: int | str | None, perm
 
 
 async def invalidate_user_cache(user_id: int) -> None:
-    """Invalidate all cached permissions for a specific user across all tenants."""
+    """Invalidate all cached permissions for a specific user."""
     if not settings.redis_rbac_enabled:
         return
         

@@ -25,7 +25,7 @@ class RedisSettings(BaseModel):
 
 class PermissionsSettings(BaseSettings):
     """Permissions and RBAC configuration settings."""
-    
+
     model_config = SettingsConfigDict(
         env_file=DOTENV_PATH,
         env_file_encoding="utf-8",
@@ -33,14 +33,13 @@ class PermissionsSettings(BaseSettings):
         env_nested_delimiter="__",
         extra="ignore",
     )
-    
+
     # Redis settings for caching permissions
     redis: RedisSettings = RedisSettings()
-    
-    # Feature flags for multi-tenancy and advanced caching
-    enable_tenancy: bool = False
+
+    # Redis cache feature flag
     redis_rbac_enabled: bool = False
-    
+
     # Cache settings
     cache_ttl_seconds: int = 300  # 5 minutes default
 

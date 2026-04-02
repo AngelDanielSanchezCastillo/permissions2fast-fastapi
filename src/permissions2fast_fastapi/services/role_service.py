@@ -13,17 +13,11 @@ from ..models.role_model import Role
 from ..models.user_role_model import UserRole
 from ..models.permission_assignment_model import PermissionAssignment
 from ..models.permission_model import Permission
-from ..models.user_tenant_role_model import UserTenantRole
-from ..settings import settings
 from ..utils.redis_client import invalidate_user_cache
 from ..schemas.role_schema import (
     RoleCreate,
     RoleUpdate,
-    # UserRoleCreate, # We might need to handle this via schema or arguments
 )
-
-# We define local types or reuse schemas where appropriate
-# For assign_user_role, we can take user_id and role_id directly or use a schema
 
 
 async def create_role(role_data: RoleCreate, session: AsyncSession) -> Role:
@@ -91,7 +85,6 @@ async def add_role_permission(
     role_id: int, permission_id: int, session: AsyncSession
 ) -> PermissionAssignment:
     """Add a permission to a role."""
-    # Check if exists
     existing = await session.exec(
         select(PermissionAssignment).where(
             PermissionAssignment.permission_id == permission_id,
@@ -112,7 +105,7 @@ async def add_role_permission(
         await session.commit()
         await session.refresh(model_has_permission)
         return model_has_permission
-    except IntegrityError: # Should be caught by check above usually
+    except IntegrityError:
         await session.rollback()
         raise ValueError("Error assigning permission to role")
 
@@ -121,7 +114,6 @@ async def list_role_permissions(
     role_id: int, session: AsyncSession
 ) -> list[Permission]:
     """List all permissions for a role."""
-    # Join PermissionAssignment with Permission
     stmt = (
         select(Permission)
         .join(PermissionAssignment, PermissionAssignment.permission_id == Permission.id)
@@ -154,51 +146,31 @@ async def delete_role_permission(
     return True
 
 
-# User Roles (UserRole where entity_type='User')
+# User Roles
 
 
 async def assign_user_role(
-    user_id: int, role_id: int, session: AsyncSession, tenant_id: int | None = None
-) -> UserRole | UserTenantRole:
+    user_id: int, role_id: int, session: AsyncSession
+) -> UserRole:
     """Assign a role to a user."""
-    if settings.enable_tenancy and tenant_id is not None:
-        # Check if exists in UserTenantRole
-        existing = await session.exec(
-            select(UserTenantRole).where(
-                UserTenantRole.role_id == role_id,
-                UserTenantRole.user_id == user_id,
-                UserTenantRole.tenant_id == tenant_id,
-            )
+    existing = await session.exec(
+        select(UserRole).where(
+            UserRole.role_id == role_id,
+            UserRole.user_id == user_id,
         )
-        if existing.one_or_none():
-            raise ValueError("User already has this role in the specified tenant")
+    )
+    if existing.one_or_none():
+        raise ValueError("User already has this role")
 
-        user_role = UserTenantRole(
-            role_id=role_id,
-            user_id=user_id,
-            tenant_id=tenant_id,
-        )
-    else:
-        # Check if exists in global UserRole
-        existing = await session.exec(
-            select(UserRole).where(
-                UserRole.role_id == role_id,
-                UserRole.user_id == user_id,
-            )
-        )
-        if existing.one_or_none():
-            raise ValueError("User already has this global role")
-
-        user_role = UserRole(
-            role_id=role_id,
-            user_id=user_id,
-        )
+    user_role = UserRole(
+        role_id=role_id,
+        user_id=user_id,
+    )
 
     session.add(user_role)
     try:
         await session.commit()
         await session.refresh(user_role)
-        # Invalidate cache
         await invalidate_user_cache(user_id)
         return user_role
     except IntegrityError:
@@ -206,43 +178,23 @@ async def assign_user_role(
         raise ValueError("Error assigning role to user")
 
 
-async def list_user_roles(user_id: int, session: AsyncSession, tenant_id: int | None = None) -> list[Role]:
+async def list_user_roles(user_id: int, session: AsyncSession) -> list[Role]:
     """List all roles assigned to a user."""
-    if settings.enable_tenancy and tenant_id is not None:
-        stmt = (
-            select(Role)
-            .join(UserTenantRole, UserTenantRole.role_id == Role.id)
-            .where(
-                UserTenantRole.user_id == user_id,
-                UserTenantRole.tenant_id == tenant_id
-            )
-        )
-    else:
-        stmt = (
-            select(Role)
-            .join(UserRole, UserRole.role_id == Role.id)
-            .where(
-                UserRole.user_id == user_id
-            )
-        )
+    stmt = (
+        select(Role)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id)
+    )
     result = await session.exec(stmt)
     return list(result.all())
 
 
-async def remove_user_role(user_id: int, role_id: int, session: AsyncSession, tenant_id: int | None = None) -> bool:
+async def remove_user_role(user_id: int, role_id: int, session: AsyncSession) -> bool:
     """Remove a role from a user."""
-    if settings.enable_tenancy and tenant_id is not None:
-        stmt = select(UserTenantRole).where(
-            UserTenantRole.role_id == role_id,
-            UserTenantRole.user_id == user_id,
-            UserTenantRole.tenant_id == tenant_id,
-        )
-    else:
-        stmt = select(UserRole).where(
-            UserRole.role_id == role_id,
-            UserRole.user_id == user_id,
-        )
-        
+    stmt = select(UserRole).where(
+        UserRole.role_id == role_id,
+        UserRole.user_id == user_id,
+    )
     result = await session.exec(stmt)
     link = result.one_or_none()
 
@@ -251,6 +203,5 @@ async def remove_user_role(user_id: int, role_id: int, session: AsyncSession, te
 
     await session.delete(link)
     await session.commit()
-    # Invalidate cache
     await invalidate_user_cache(user_id)
     return True

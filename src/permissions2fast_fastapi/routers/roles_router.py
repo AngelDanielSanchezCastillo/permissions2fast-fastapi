@@ -13,7 +13,7 @@ from ..schemas.role_schema import (
     RoleUpdate,
     RolePermissionCreate,
     UserRoleCreate,
-    UserRoleRead
+    UserRoleRead,
 )
 from ..schemas.permission_schema import PermissionRead
 from ..services import role_service
@@ -100,8 +100,6 @@ async def add_role_permission(
 ):
     """Add a permission to a role."""
     try:
-        # We don't have a specific schema for PermissionAssignment read yet that is friendly, 
-        # but we can return success
         await role_service.add_role_permission(role_id, perm_data.permission_id, session)
         return {"message": "Permission added to role successfully"}
     except ValueError as e:
@@ -144,11 +142,9 @@ async def assign_user_role(
         user_role = await role_service.assign_user_role(
             assignment_data.user_id, assignment_data.role_id, session
         )
-        # Manually validate since UserRole structure differs slightly from old UserRole
         return UserRoleRead(
+            user_id=user_role.user_id,
             role_id=user_role.role_id,
-            entity_type=user_role.entity_type,
-            entity_id=user_role.entity_id
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

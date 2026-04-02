@@ -54,16 +54,6 @@ def _permission_key(user_id: int) -> str:
     return f"user_permissions:{user_id}"
 
 
-def _tenant_key(tenant_id: int) -> str:
-    """Generate Redis key for tenant data."""
-    return f"tenant:{tenant_id}"
-
-
-def _user_tenant_key(user_id: int) -> str:
-    """Generate Redis key for user's tenant ID."""
-    return f"user_tenant:{user_id}"
-
-
 async def cache_user_permissions(
     user_id: int, permissions: list[dict[str, Any]], ttl: int | None = None
 ):
@@ -119,84 +109,6 @@ async def invalidate_user_cache(user_id: int):
     await client.delete(_permission_key(user_id))
 
 
-async def cache_tenant_data(
-    tenant_id: int, tenant_data: dict[str, Any], ttl: int | None = None
-):
-    """
-    Cache tenant data in Redis.
-
-    Args:
-        tenant_id: Tenant's ID
-        tenant_data: Tenant information dictionary
-        ttl: Time to live in seconds (default: from settings)
-    """
-    client = await get_redis_client()
-    key = _tenant_key(tenant_id)
-    ttl = ttl or 300  # Default 5 minutes
-
-    await client.setex(
-        key,
-        ttl,
-        json.dumps(tenant_data, default=str),
-    )
-
-
-async def get_tenant_data(tenant_id: int) -> dict[str, Any] | None:
-    """
-    Retrieve tenant data from cache.
-
-    Args:
-        tenant_id: Tenant's ID
-
-    Returns:
-        Tenant data or None if not cached
-    """
-    client = await get_redis_client()
-    key = _tenant_key(tenant_id)
-
-    cached = await client.get(key)
-    if cached:
-        return json.loads(cached)
-
-    return None
-
-
-async def cache_user_tenant(user_id: int, tenant_id: int, ttl: int | None = None):
-    """
-    Cache user's tenant ID for faster lookups.
-
-    Args:
-        user_id: User's ID
-        tenant_id: Tenant's ID
-        ttl: Time to live in seconds (default: from settings)
-    """
-    client = await get_redis_client()
-    key = _user_tenant_key(user_id)
-    ttl = ttl or 300  # Default 5 minutes
-
-    await client.setex(key, ttl, str(tenant_id))
-
-
-async def get_user_tenant(user_id: int) -> int | None:
-    """
-    Retrieve user's tenant ID from cache.
-
-    Args:
-        user_id: User's ID
-
-    Returns:
-        Tenant ID or None if not cached
-    """
-    client = await get_redis_client()
-    key = _user_tenant_key(user_id)
-
-    cached = await client.get(key)
-    if cached:
-        return int(cached)
-
-    return None
-
-
 async def check_route_access(
     user_id: int, route_path: str, method: str = "GET"
 ) -> bool | None:
@@ -230,22 +142,3 @@ async def check_route_access(
 
     # No specific permission found
     return None
-
-
-async def invalidate_all_tenant_users(tenant_id: int, user_ids: list[int]):
-    """
-    Invalidate cache for all users in a tenant.
-    Useful when tenant-wide permissions change.
-
-    Args:
-        tenant_id: Tenant's ID
-        user_ids: List of user IDs in the tenant
-    """
-    client = await get_redis_client()
-
-    # Invalidate tenant data
-    await client.delete(_tenant_key(tenant_id))
-
-    # Invalidate all user permissions
-    for user_id in user_ids:
-        await invalidate_user_cache(user_id)

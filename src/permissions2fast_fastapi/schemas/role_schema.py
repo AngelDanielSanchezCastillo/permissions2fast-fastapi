@@ -23,18 +23,18 @@ class RoleRead(RoleBase):
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
+
 # Assignment Schemas
 
 class RolePermissionCreate(SQLModel):
     permission_id: int
 
+
 class UserRoleCreate(SQLModel):
     user_id: int
     role_id: int
 
+
 class UserRoleRead(SQLModel):
-    # Just return relationships or success status?
-    # Usually we might return the created link, but let's stick to what we have in service
+    user_id: int
     role_id: int
-    entity_type: str
-    entity_id: int
