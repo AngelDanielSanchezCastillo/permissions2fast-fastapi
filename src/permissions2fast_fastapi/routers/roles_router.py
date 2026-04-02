@@ -5,7 +5,7 @@ Endpoints for managing roles, role permissions, and user-role assignments.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..schemas.role_schema import (
     RoleCreate,

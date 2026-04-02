@@ -7,7 +7,7 @@ Dependencies for protecting routes based on roles and permissions.
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Import from oauth2fast-fastapi directly
 from oauth2fast_fastapi.dependencies import get_current_verified_user, get_auth_session

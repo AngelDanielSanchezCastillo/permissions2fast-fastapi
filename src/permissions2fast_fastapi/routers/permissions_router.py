@@ -5,7 +5,7 @@ Endpoints for managing permissions, categories, and assignments.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..schemas.permission_schema import (
     PermissionCreate,

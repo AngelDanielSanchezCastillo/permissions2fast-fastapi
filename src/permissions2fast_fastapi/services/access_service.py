@@ -4,7 +4,7 @@ Access Service
 Handles high-level access control logic and permission checking.
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, union
 
 from ..models.permission_assignment_model import PermissionAssignment
@@ -34,10 +34,10 @@ async def check_user_access(
     
     # 1. Check if route exists and requires validation
     # We strip trailing slash for consistency if needed, but strict match for now
-    route_result = await session.execute(
+    route_result = await session.exec(
         select(Route).where(Route.name == route_path)
     )
-    route = route_result.scalar_one_or_none()
+    route = route_result.one_or_none()
     
     # If route doesn't exist in DB, decide default behavior.
     # Usually if it's not registered, we might deny or allow. 
@@ -101,8 +101,8 @@ async def check_user_access(
         .join(PermissionRoute, PermissionRoute.route_id == Route.id)
         .where(PermissionRoute.permission_id.in_(select(user_perm_ids_query)))
     )
-    result = await session.execute(stmt)
-    allowed_route_names = list(result.scalars().all())
+    result = await session.exec(stmt)
+    allowed_route_names = list(result.all())
 
     # 4. Cache the result for future requests
     await set_cached_permissions(user_id, tenant_id, allowed_route_names)

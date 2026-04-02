@@ -5,7 +5,7 @@ Business logic for managing permissions, categories, and user-specific assignmen
 """
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from ..models.permission_model import Permission
@@ -36,10 +36,10 @@ async def list_categories(
     session: AsyncSession, skip: int = 0, limit: int = 100
 ) -> list[PermissionCategory]:
     """List all categories."""
-    result = await session.execute(
+    result = await session.exec(
         select(PermissionCategory).offset(skip).limit(limit).order_by(PermissionCategory.name)
     )
-    return list(result.scalars().all())
+    return list(result.all())
 
 # Permissions
 
@@ -62,20 +62,20 @@ async def get_permission(
     permission_id: int, session: AsyncSession
 ) -> Permission | None:
     """Get permission by ID."""
-    result = await session.execute(
+    result = await session.exec(
         select(Permission).where(Permission.id == permission_id)
     )
-    return result.scalar_one_or_none()
+    return result.one_or_none()
 
 
 async def list_permissions(
     session: AsyncSession, skip: int = 0, limit: int = 100
 ) -> list[Permission]:
     """List all permissions."""
-    result = await session.execute(
+    result = await session.exec(
         select(Permission).offset(skip).limit(limit).order_by(Permission.name)
     )
-    return list(result.scalars().all())
+    return list(result.all())
 
 
 async def update_permission(
@@ -112,13 +112,13 @@ async def add_permission_route(
     permission_id: int, route_id: int, session: AsyncSession
 ) -> PermissionRoute:
     """Link a permission to a route."""
-    existing = await session.execute(
+    existing = await session.exec(
         select(PermissionRoute).where(
             PermissionRoute.permission_id == permission_id,
             PermissionRoute.route_id == route_id
         )
     )
-    if existing.scalar_one_or_none():
+    if existing.one_or_none():
          raise ValueError("Route already assigned to permission")
 
     perm_route = PermissionRoute(permission_id=permission_id, route_id=route_id)
@@ -137,14 +137,14 @@ async def assign_user_permission(
     user_id: int, permission_id: int, session: AsyncSession
 ) -> PermissionAssignment:
     """Assign a permission directly to a user."""
-    existing = await session.execute(
+    existing = await session.exec(
         select(PermissionAssignment).where(
             PermissionAssignment.permission_id == permission_id,
             PermissionAssignment.entity_type == "User",
             PermissionAssignment.entity_id == user_id,
         )
     )
-    if existing.scalar_one_or_none():
+    if existing.one_or_none():
          raise ValueError("Permission already assigned to user")
 
     model_has_perm = PermissionAssignment(
@@ -174,8 +174,8 @@ async def list_user_permissions(
             PermissionAssignment.entity_id == user_id
         )
     )
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    result = await session.exec(stmt)
+    return list(result.all())
 
 async def remove_user_permission(
     user_id: int, permission_id: int, session: AsyncSession
@@ -186,8 +186,8 @@ async def remove_user_permission(
         PermissionAssignment.entity_type == "User",
         PermissionAssignment.entity_id == user_id,
     )
-    result = await session.execute(stmt)
-    link = result.scalar_one_or_none()
+    result = await session.exec(stmt)
+    link = result.one_or_none()
 
     if not link:
         return False

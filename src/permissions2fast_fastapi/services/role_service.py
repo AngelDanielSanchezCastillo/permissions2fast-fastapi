@@ -6,7 +6,7 @@ permission assignment, and user-role management.
 """
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, delete
 
 from ..models.role_model import Role
@@ -41,18 +41,18 @@ async def create_role(role_data: RoleCreate, session: AsyncSession) -> Role:
 
 async def get_role(role_id: int, session: AsyncSession) -> Role | None:
     """Get role by ID."""
-    result = await session.execute(select(Role).where(Role.id == role_id))
-    return result.scalar_one_or_none()
+    result = await session.exec(select(Role).where(Role.id == role_id))
+    return result.one_or_none()
 
 
 async def list_roles(
     session: AsyncSession, skip: int = 0, limit: int = 100
 ) -> list[Role]:
     """List all roles."""
-    result = await session.execute(
+    result = await session.exec(
         select(Role).offset(skip).limit(limit).order_by(Role.name)
     )
-    return list(result.scalars().all())
+    return list(result.all())
 
 
 async def update_role(
@@ -92,14 +92,14 @@ async def add_role_permission(
 ) -> PermissionAssignment:
     """Add a permission to a role."""
     # Check if exists
-    existing = await session.execute(
+    existing = await session.exec(
         select(PermissionAssignment).where(
             PermissionAssignment.permission_id == permission_id,
             PermissionAssignment.entity_type == "Role",
             PermissionAssignment.entity_id == role_id,
         )
     )
-    if existing.scalar_one_or_none():
+    if existing.one_or_none():
         raise ValueError("Permission already assigned to this role")
 
     model_has_permission = PermissionAssignment(
@@ -130,8 +130,8 @@ async def list_role_permissions(
             PermissionAssignment.entity_id == role_id,
         )
     )
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    result = await session.exec(stmt)
+    return list(result.all())
 
 
 async def delete_role_permission(
@@ -143,8 +143,8 @@ async def delete_role_permission(
         PermissionAssignment.entity_type == "Role",
         PermissionAssignment.entity_id == role_id,
     )
-    result = await session.execute(stmt)
-    link = result.scalar_one_or_none()
+    result = await session.exec(stmt)
+    link = result.one_or_none()
 
     if not link:
         return False
@@ -163,14 +163,14 @@ async def assign_user_role(
     """Assign a role to a user."""
     if settings.enable_tenancy and tenant_id is not None:
         # Check if exists in UserTenantRole
-        existing = await session.execute(
+        existing = await session.exec(
             select(UserTenantRole).where(
                 UserTenantRole.role_id == role_id,
                 UserTenantRole.user_id == user_id,
                 UserTenantRole.tenant_id == tenant_id,
             )
         )
-        if existing.scalar_one_or_none():
+        if existing.one_or_none():
             raise ValueError("User already has this role in the specified tenant")
 
         user_role = UserTenantRole(
@@ -180,13 +180,13 @@ async def assign_user_role(
         )
     else:
         # Check if exists in global UserRole
-        existing = await session.execute(
+        existing = await session.exec(
             select(UserRole).where(
                 UserRole.role_id == role_id,
                 UserRole.user_id == user_id,
             )
         )
-        if existing.scalar_one_or_none():
+        if existing.one_or_none():
             raise ValueError("User already has this global role")
 
         user_role = UserRole(
@@ -225,8 +225,8 @@ async def list_user_roles(user_id: int, session: AsyncSession, tenant_id: int | 
                 UserRole.user_id == user_id
             )
         )
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    result = await session.exec(stmt)
+    return list(result.all())
 
 
 async def remove_user_role(user_id: int, role_id: int, session: AsyncSession, tenant_id: int | None = None) -> bool:
@@ -243,8 +243,8 @@ async def remove_user_role(user_id: int, role_id: int, session: AsyncSession, te
             UserRole.user_id == user_id,
         )
         
-    result = await session.execute(stmt)
-    link = result.scalar_one_or_none()
+    result = await session.exec(stmt)
+    link = result.one_or_none()
 
     if not link:
         return False

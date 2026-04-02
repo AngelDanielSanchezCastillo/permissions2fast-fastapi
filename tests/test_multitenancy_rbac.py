@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import FastAPI, Depends, Request, APIRouter
 from httpx import AsyncClient, ASGITransport
 

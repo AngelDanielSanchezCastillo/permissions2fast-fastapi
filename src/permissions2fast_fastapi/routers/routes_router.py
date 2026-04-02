@@ -5,7 +5,7 @@ Endpoints for managing routes.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..schemas.route_schema import (
     RouteCreate,
