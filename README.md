@@ -91,21 +91,30 @@ To quickly set up default access control for the package routes itself (admin ro
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from sqlmodel.ext.asyncio.session import AsyncSession
-from oauth2fast_fastapi import get_manager
+from pgsqlasync2fast_fastapi import startup_database, get_db_manager
+from oauth2fast_fastapi import get_db_engine, AuthModel
 from permissions2fast_fastapi import seed_rbac_from_json
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # This example assumes you have an 'auth' bound session using pgsqlasync2fast-fastapi
-    manager = get_manager()
-    engine = manager.get_engine("auth")
-    
+    await startup_database()
+
+    # List configured connections
+    manager = get_db_manager()
+
+    # Create auth database tables
+    engine = get_db_engine("auth", manager)
+    async with engine.begin() as conn:
+        # Create auth tables (User, etc.)
+        await conn.run_sync(AuthModel.metadata.create_all)
     # Run the seeder when starting up your application
-    async with AsyncSession(engine) as session:
+    session = await manager.get_session("auth")
+    try:
         # Seeder is idempotent and won't duplicate data on multiple startups
-        await seed_rbac_from_json(session, route_prefix="") 
-    yield
+        await seed_rbac_from_json(session, route_prefix="")
+    finally:
+        await session.close()
 
 app = FastAPI(lifespan=lifespan)
 ```
