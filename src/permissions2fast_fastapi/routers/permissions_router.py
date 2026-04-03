@@ -7,7 +7,7 @@ Endpoints for managing permissions, categories, and assignments.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..schemas.permission_schema import (
+from rbac2fast_core.schemas.permission_schema import (
     PermissionCreate,
     PermissionRead,
     PermissionUpdate,
@@ -15,7 +15,7 @@ from ..schemas.permission_schema import (
     UserPermissionRead,
     PermissionRouteCreate
 )
-from ..schemas.permission_category_schema import (
+from rbac2fast_core.schemas.permission_category_schema import (
     PermissionCategoryCreate,
     PermissionCategoryRead
 )

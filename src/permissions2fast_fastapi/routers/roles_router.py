@@ -7,7 +7,7 @@ Endpoints for managing roles, role permissions, and user-role assignments.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..schemas.role_schema import (
+from rbac2fast_core.schemas.role_schema import (
     RoleCreate,
     RoleRead,
     RoleUpdate,
@@ -15,7 +15,7 @@ from ..schemas.role_schema import (
     UserRoleCreate,
     UserRoleRead,
 )
-from ..schemas.permission_schema import PermissionRead
+from rbac2fast_core.schemas.permission_schema import PermissionRead
 from ..services import role_service
 from oauth2fast_fastapi.dependencies import get_auth_session
 

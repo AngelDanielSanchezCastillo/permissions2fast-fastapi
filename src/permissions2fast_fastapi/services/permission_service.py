@@ -13,8 +13,8 @@ from ..models.permission_category_model import PermissionCategory
 from ..models.permission_assignment_model import PermissionAssignment
 from ..models.permission_route_model import PermissionRoute
 from ..models.route_model import Route
-from ..schemas.permission_schema import PermissionCreate, PermissionUpdate
-from ..schemas.permission_category_schema import PermissionCategoryCreate
+from rbac2fast_core.schemas.permission_schema import PermissionCreate, PermissionUpdate
+from rbac2fast_core.schemas.permission_category_schema import PermissionCategoryCreate
 
 # Categories
 

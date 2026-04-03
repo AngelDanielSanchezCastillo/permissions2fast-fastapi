@@ -128,7 +128,7 @@ async def test_api_permissions_flow(client: AsyncClient, session, user_with_perm
     with patch("permissions2fast_fastapi.dependencies.access_service.check_user_access", return_value=True):
         # 1. Create Category
         resp = await client.post("/permissions/categories", json={"name": "API Test"})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, resp.text
         cat_id = resp.json()["id"]
         
         # 2. Create Permission

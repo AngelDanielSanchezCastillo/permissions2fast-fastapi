@@ -9,7 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from ..models.route_model import Route
-from ..schemas.route_schema import RouteCreate
+from rbac2fast_core.schemas.route_schema import RouteCreate
 
 async def create_route(
     route_data: RouteCreate, session: AsyncSession

@@ -14,7 +14,7 @@ from ..models.user_role_model import UserRole
 from ..models.permission_assignment_model import PermissionAssignment
 from ..models.permission_model import Permission
 from ..utils.redis_client import invalidate_user_cache
-from ..schemas.role_schema import (
+from rbac2fast_core.schemas.role_schema import (
     RoleCreate,
     RoleUpdate,
 )

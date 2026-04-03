@@ -7,7 +7,7 @@ Endpoints for managing routes.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..schemas.route_schema import (
+from rbac2fast_core.schemas.route_schema import (
     RouteCreate,
     RouteRead,
 )
