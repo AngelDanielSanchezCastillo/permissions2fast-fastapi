@@ -1324,7 +1324,7 @@ wheels = [
 
 [[package]]
 name = "permissions2fast-fastapi"
-version = "0.5.0"
+version = "0.5.1"
 source = { editable = "." }
 dependencies = [
     { name = "oauth2fast-fastapi" },

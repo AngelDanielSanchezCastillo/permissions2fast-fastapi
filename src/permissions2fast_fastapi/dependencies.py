@@ -72,7 +72,13 @@ def has_permission(
         user: Annotated[User, Depends(get_current_verified_user)],
         session: Annotated[AsyncSession, Depends(get_auth_session)],
     ) -> User:
-        route_to_check = permission_route or request.url.path
+        # Use the FastAPI route template (e.g. /roles/user/{user_id}) instead of
+        # the real URL path (e.g. /roles/user/1) so it matches the stored routes.
+        if permission_route is not None:
+            route_to_check = permission_route
+        else:
+            fastapi_route = request.scope.get("route")
+            route_to_check = fastapi_route.path if fastapi_route else request.url.path
         method_to_check = method or request.method
 
         is_allowed = await access_service.check_user_access(
