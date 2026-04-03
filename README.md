@@ -83,3 +83,29 @@ async def admin_dashboard(user: User = Depends(has_role("admin"))):
 async def edit_post(user: User = Depends(has_permission("posts.edit"))):
     return {"message": "You can edit posts"}
 ```
+
+### 3. Using the Default Seeder
+
+To quickly set up default access control for the package routes itself (admin role and necessary permissions to add/remove routes, roles, and permissions), you can use the built-in JSON seeder during the application startup process (`lifespan`).
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from sqlmodel.ext.asyncio.session import AsyncSession
+from oauth2fast_fastapi import get_manager
+from permissions2fast_fastapi import seed_rbac_from_json
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # This example assumes you have an 'auth' bound session using pgsqlasync2fast-fastapi
+    manager = get_manager()
+    engine = manager.get_engine("auth")
+    
+    # Run the seeder when starting up your application
+    async with AsyncSession(engine) as session:
+        # Seeder is idempotent and won't duplicate data on multiple startups
+        await seed_rbac_from_json(session, route_prefix="") 
+    yield
+
+app = FastAPI(lifespan=lifespan)
+```

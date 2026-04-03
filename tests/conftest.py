@@ -119,8 +119,10 @@ def app() -> FastAPI:
 
 
 @pytest.fixture(scope="function")
-async def client(app: FastAPI, session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(app: FastAPI, session: AsyncSession, test_user) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[get_auth_session] = lambda: session
+    from oauth2fast_fastapi.dependencies import get_current_verified_user
+    app.dependency_overrides[get_current_verified_user] = lambda: test_user
     
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

@@ -123,28 +123,31 @@ async def test_check_user_access_denied(session, user_with_permission, setup_per
 
 @pytest.mark.asyncio
 async def test_api_permissions_flow(client: AsyncClient, session, user_with_permission):
-    # 1. Create Category
-    resp = await client.post("/permissions/categories", json={"name": "API Test"})
-    assert resp.status_code == 200
-    cat_id = resp.json()["id"]
+    from unittest.mock import patch
     
-    # 2. Create Permission
-    resp = await client.post("/permissions/", json={"name": "api_test_perm", "permission_category_id": cat_id})
-    assert resp.status_code == 200
-    perm_id = resp.json()["id"]
-    
-    # 3. Create Route
-    resp = await client.post("/routes/", json={"name": "/api/test-flow", "validate": True})
-    assert resp.status_code == 200
-    route_id = resp.json()["id"]
-    
-    # 4. Link Permission to Route
-    resp = await client.post(f"/permissions/{perm_id}/routes", json={"permission_id": perm_id, "route_id": route_id})
-    assert resp.status_code == 200
-    
-    # 5. Assign Permission to User
-    resp = await client.post("/permissions/assign", json={"user_id": user_with_permission.id, "permission_id": perm_id})
-    assert resp.status_code == 200
+    with patch("permissions2fast_fastapi.dependencies.access_service.check_user_access", return_value=True):
+        # 1. Create Category
+        resp = await client.post("/permissions/categories", json={"name": "API Test"})
+        assert resp.status_code == 200
+        cat_id = resp.json()["id"]
+        
+        # 2. Create Permission
+        resp = await client.post("/permissions/", json={"name": "api_test_perm", "permission_category_id": cat_id})
+        assert resp.status_code == 200
+        perm_id = resp.json()["id"]
+        
+        # 3. Create Route
+        resp = await client.post("/routes/", json={"name": "/api/test-flow", "validate": True})
+        assert resp.status_code == 200
+        route_id = resp.json()["id"]
+        
+        # 4. Link Permission to Route
+        resp = await client.post(f"/permissions/{perm_id}/routes", json={"permission_id": perm_id, "route_id": route_id})
+        assert resp.status_code == 200
+        
+        # 5. Assign Permission to User
+        resp = await client.post("/permissions/assign", json={"user_id": user_with_permission.id, "permission_id": perm_id})
+        assert resp.status_code == 200
     
     # 6. Verify Access Service check
     is_allowed = await access_service.check_user_access(

@@ -22,9 +22,12 @@ from ..schemas.permission_category_schema import (
 from ..services import permission_service
 from oauth2fast_fastapi.dependencies import get_auth_session
 
+from ..dependencies import has_permission
+
 router = APIRouter(
     prefix="/permissions",
     tags=["Permissions"],
+    dependencies=[Depends(has_permission())],
 )
 
 

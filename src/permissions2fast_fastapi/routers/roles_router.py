@@ -19,9 +19,12 @@ from ..schemas.permission_schema import PermissionRead
 from ..services import role_service
 from oauth2fast_fastapi.dependencies import get_auth_session
 
+from ..dependencies import has_permission
+
 router = APIRouter(
     prefix="/roles",
     tags=["Roles"],
+    dependencies=[Depends(has_permission())],
 )
 
 
