@@ -1,11 +1,18 @@
 import asyncio
+import os
+from pathlib import Path
 from typing import AsyncGenerator, Generator
 
 import pytest
+from dotenv import load_dotenv
 from httpx import AsyncClient, ASGITransport
 from fastapi import FastAPI
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import SQLModel
+
+# Load environment variables from Backend-Metal-ERP
+env_path = Path("/Users/angeldanielsanchezcastillo/Repos/GitHub/Backend-Metal-ERP/.env")
+load_dotenv(env_path)
 
 # Import from oauth2fast-fastapi
 from oauth2fast_fastapi import (
@@ -48,35 +55,43 @@ def event_loop() -> Generator:
 
 @pytest.fixture(scope="function", autouse=True)
 async def redis_cleanup():
-    """Ensure Redis client is closed after each test."""
+    """Ensure Redis client is closed and cache cleared after each test."""
     yield
-    await permission_cache.close_redis_client()
+    # Clear all RBAC cache keys before test finishes
+    from permissions2fast_fastapi.utils.redis_client import get_redis_client
+    try:
+        client = await get_redis_client()
+        if client:
+            cursor = b'0'
+            while cursor:
+                cursor, keys = await client.scan(cursor=cursor, match="rbac:*", count=100)
+                if keys:
+                    await client.delete(*keys)
+    except Exception:
+        pass
+    finally:
+        await permission_cache.close_redis_client()
 
 
 @pytest.fixture(scope="session")
 async def db_engine():
-    # Initialize the database connection using oauth2fast-fastapi utility
-    # This expects DB_CONNECTIONS__AUTH__... environment variables to be set
-    await startup_database()
+    # Use pgsqlasync2fast_fastapi connection manager like Backend-Metal-ERP
+    # This will use the same environment variables
+    from pgsqlasync2fast_fastapi.connection import get_manager
     
-    # Get the manager explicitly since we cannot use Depends in a fixture
     manager = get_manager()
-    # "auth" is intrinsic to oauth2fast-fastapi
     engine = manager.get_engine("auth")
     
-    # Create tables
+    # Create tables using AuthModel metadata (don't drop schema - just create tables)
     print(f"DEBUG: Creating tables for: {AuthModel.metadata.tables.keys()}")
     async with engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA public CASCADE;"))
-        await conn.execute(text("CREATE SCHEMA public;"))
-        await conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
         await conn.run_sync(AuthModel.metadata.create_all)
-    print("DEBUG: Tables created.")
+    print("DEBUG: Tables created/verified.")
     
     yield engine
     
-    # Cleanup
-    await shutdown_database()
+    # Cleanup - close engine
+    await engine.dispose()
 
 
 @pytest.fixture(scope="function")

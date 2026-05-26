@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "name": "manage_routes",
+    "description": "Manage routes configuration",
+    "category_id": 1
+  },
+  {
+    "id": 2,
+    "name": "manage_roles",
+    "description": "Manage roles and role permissions",
+    "category_id": 1
+  },
+  {
+    "id": 3,
+    "name": "manage_permissions",
+    "description": "Manage permissions and permission assignments",
+    "category_id": 1
+  },
+  {
+    "id": 4,
+    "name": "users:read",
+    "description": "View user information",
+    "category_id": 2
+  },
+  {
+    "id": 5,
+    "name": "users:create",
+    "description": "Create new users",
+    "category_id": 2
+  },
+  {
+    "id": 6,
+    "name": "users:update",
+    "description": "Update existing users",
+    "category_id": 2
+  },
+  {
+    "id": 7,
+    "name": "users:delete",
+    "description": "Delete users",
+    "category_id": 2
+  },
+  {
+    "id": 8,
+    "name": "roles:read",
+    "description": "View role information",
+    "category_id": 3
+  },
+  {
+    "id": 9,
+    "name": "roles:create",
+    "description": "Create new roles",
+    "category_id": 3
+  },
+  {
+    "id": 10,
+    "name": "roles:update",
+    "description": "Update existing roles",
+    "category_id": 3
+  },
+  {
+    "id": 11,
+    "name": "roles:delete",
+    "description": "Delete roles",
+    "category_id": 3
+  }
+]

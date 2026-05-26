@@ -1,0 +1,19 @@
+{
+  "fk_fields": {
+    "permissions": "category_id"
+  },
+  "profile_folders": ["dev", "prod"],
+  "tables": {
+    "categories": {
+      "file": "categories.json"
+    },
+    "roles": {
+      "file": "roles.json"
+    },
+    "permissions": {
+      "file": "permissions.json",
+      "depends_on": ["categories"]
+    }
+  },
+  "load_order": ["categories", "roles", "permissions"]
+}

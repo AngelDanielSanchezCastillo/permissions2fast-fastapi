@@ -13,6 +13,7 @@ from ..models.permission_category_model import PermissionCategory
 from ..models.permission_assignment_model import PermissionAssignment
 from ..models.permission_route_model import PermissionRoute
 from ..models.route_model import Route
+from ..utils.redis_client import invalidate_user_cache
 from rbac2fast_core.schemas.permission_schema import PermissionCreate, PermissionUpdate
 from rbac2fast_core.schemas.permission_category_schema import PermissionCategoryCreate
 
@@ -156,6 +157,8 @@ async def assign_user_permission(
     try:
         await session.commit()
         await session.refresh(model_has_perm)
+        # Invalidate RBAC cache so new permission takes effect immediately
+        await invalidate_user_cache(user_id)
         return model_has_perm
     except IntegrityError:
         await session.rollback()

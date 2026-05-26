@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "manage_roles",
+    "description": "Manage roles",
+    "category_id": 1
+  },
+  {
+    "id": 2,
+    "name": "users:read",
+    "description": "View user information",
+    "category_id": 2
+  },
+  {
+    "id": 3,
+    "name": "users:create",
+    "description": "Create new users",
+    "category_id": 2
+  },
+  {
+    "id": 4,
+    "name": "roles:read",
+    "description": "View role information",
+    "category_id": 2
+  }
+]

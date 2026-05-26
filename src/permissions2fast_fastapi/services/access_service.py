@@ -12,7 +12,7 @@ from ..models.user_role_model import UserRole
 from ..models.permission_route_model import PermissionRoute
 from ..models.route_model import Route
 
-from ..utils.redis_client import get_cached_permissions, set_cached_permissions
+from ..utils.redis_client import get_cached_permissions, set_cached_permissions, invalidate_user_cache
 
 
 async def check_user_access(

@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "name": "Admin",
+    "description": "Administrator with full access to permissions management"
+  },
+  {
+    "id": 2,
+    "name": "Manager",
+    "description": "Manager with elevated privileges but limited system config"
+  },
+  {
+    "id": 3,
+    "name": "User",
+    "description": "Standard user with basic access"
+  },
+  {
+    "id": 4,
+    "name": "Guest",
+    "description": "Guest user with read-only access"
+  }
+]
