@@ -181,20 +181,20 @@ class RoleUnexpectedErrorResponse(BaseModel):
 
 # ============ User Role Responses ============
 
-class UserRoleResponse(BaseModel):
+class RoleUserResponse(BaseModel):
     """Response for user role assignment data."""
     user_id: int
     role_id: int
 
 
-class UserRoleCreatedResponse(BaseModel):
+class RoleUserCreatedResponse(BaseModel):
     """Successful user role assignment response."""
     success: Literal[True] = True
     message: str = "Rol asignado exitosamente"
-    user_role: UserRoleResponse
+    user_role: RoleUserResponse
 
 
-class UserRoleErrorResponse(BaseModel):
+class RoleUserErrorResponse(BaseModel):
     """Error response for user role operations."""
     success: Literal[False] = False
     error_type: Literal["controlled"] = "controlled"

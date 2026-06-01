@@ -2,13 +2,13 @@ from sqlmodel import Field, UniqueConstraint
 from oauth2fast_fastapi.models import AuthModel
 
 
-class UserRole(AuthModel, table=True):
+class RoleUser(AuthModel, table=True):
     """
     User Role mapping for RBAC.
     Description: Link table that maps users to their assigned roles.
     """
 
-    __tablename__ = "user_role"
+    __tablename__ = "role_users"
     __table_args__ = (
         UniqueConstraint("user_id", "role_id", name="uq_user_role"),
     )

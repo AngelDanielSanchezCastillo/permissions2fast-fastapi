@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, delete
 
 from ..models.role_model import Role
-from ..models.user_role_model import UserRole
+from ..models.user_role_model import RoleUser
 from ..models.permission_assignment_model import PermissionAssignment
 from ..models.permission_model import Permission
 from ..utils.redis_client import invalidate_user_cache
@@ -151,18 +151,18 @@ async def delete_role_permission(
 
 async def assign_user_role(
     user_id: int, role_id: int, session: AsyncSession
-) -> UserRole:
+) -> RoleUser:
     """Assign a role to a user."""
     existing = await session.exec(
-        select(UserRole).where(
-            UserRole.role_id == role_id,
-            UserRole.user_id == user_id,
+select(RoleUser).where(
+RoleUser.role_id == role_id,
+RoleUser.user_id == user_id,
         )
     )
     if existing.one_or_none():
         raise ValueError("User already has this role")
 
-    user_role = UserRole(
+    user_role = RoleUser(
         role_id=role_id,
         user_id=user_id,
     )
@@ -182,8 +182,8 @@ async def list_user_roles(user_id: int, session: AsyncSession) -> list[Role]:
     """List all roles assigned to a user."""
     stmt = (
         select(Role)
-        .join(UserRole, UserRole.role_id == Role.id)
-        .where(UserRole.user_id == user_id)
+        .join(RoleUser, RoleUser.role_id == Role.id)
+        .where(RoleUser.user_id == user_id)
     )
     result = await session.exec(stmt)
     return list(result.all())
@@ -191,9 +191,9 @@ async def list_user_roles(user_id: int, session: AsyncSession) -> list[Role]:
 
 async def remove_user_role(user_id: int, role_id: int, session: AsyncSession) -> bool:
     """Remove a role from a user."""
-    stmt = select(UserRole).where(
-        UserRole.role_id == role_id,
-        UserRole.user_id == user_id,
+    stmt = select(RoleUser).where(
+        RoleUser.role_id == role_id,
+        RoleUser.user_id == user_id,
     )
     result = await session.exec(stmt)
     link = result.one_or_none()

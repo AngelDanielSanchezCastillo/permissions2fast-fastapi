@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from permissions2fast_fastapi.models.role_model import Role
-from permissions2fast_fastapi.models.user_role_model import UserRole
+from permissions2fast_fastapi.models.user_role_model import RoleUser
 from permissions2fast_fastapi.models.permission_category_model import PermissionCategory
 from permissions2fast_fastapi.models.permission_model import Permission
 from permissions2fast_fastapi.models.route_model import Route
@@ -25,7 +25,7 @@ async def test_create_role(session):
 
 @pytest.mark.asyncio
 async def test_assign_role_to_user(session, test_user, test_role):
-    user_role = UserRole(
+    user_role = RoleUser(
         user_id=test_user.id,
         role_id=test_role.id
     )

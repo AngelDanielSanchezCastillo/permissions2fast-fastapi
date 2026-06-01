@@ -30,9 +30,9 @@ from ..schemas.response_schemas import (
     RoleResponse,
     PermissionListResponse,
     PermissionResponse,
-    UserRoleCreatedResponse,
-    UserRoleErrorResponse,
-    UserRoleResponse,
+RoleUserCreatedResponse,
+    RoleUserErrorResponse,
+    RoleUserResponse,
     RolePermissionSuccessResponse,
     RolePermissionErrorResponse,
     DeleteSuccessResponse,
@@ -272,7 +272,7 @@ async def assign_user_role(
             assignment_data.user_id, assignment_data.role_id, session
         )
         return UserRoleCreatedResponse(
-            user_role=UserRoleResponse(
+            user_role=RoleUserResponse(
                 user_id=user_role.user_id,
                 role_id=user_role.role_id,
             )

@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 
 from permissions2fast_fastapi.models.role_model import Role
-from permissions2fast_fastapi.models.user_role_model import UserRole
+from permissions2fast_fastapi.models.user_role_model import RoleUser
 from permissions2fast_fastapi.models.permission_category_model import PermissionCategory
 from permissions2fast_fastapi.models.permission_model import Permission
 from permissions2fast_fastapi.models.route_model import Route
@@ -59,7 +59,7 @@ async def setup_permissions(session, user_with_permission, admin_role):
     session.add(PermissionRoute(permission_id=perm_user.id, route_id=route_user.id))
     
     # Assign Role -> User
-    session.add(UserRole(role_id=admin_role.id, user_id=user_with_permission.id))
+    session.add(RoleUser(role_id=admin_role.id, user_id=user_with_permission.id))
     
     # Assign Permission -> Role
     session.add(PermissionAssignment(permission_id=perm_admin.id, entity_type="Role", entity_id=admin_role.id))

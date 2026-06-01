@@ -118,3 +118,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 ```
+
+## 📋 Naming Conventions
+
+This package follows consistent naming conventions for models and database tables:
+
+### Model Classes (Python)
+- **Singular** PascalCase
+- Examples: `User`, `Role`, `Permission`, `Route`, `RoleUser`
+
+### Database Tables
+- **Plural** snake_case
+- Examples: `users`, `roles`, `permissions`, `routes`, `role_users`
+
+### Many-to-Many Join Tables
+- **Plural** snake_case on both table names
+- **Alphabetical order** of the two table names
+- Examples: `role_users` (r < u), `permission_roles` (p < r)

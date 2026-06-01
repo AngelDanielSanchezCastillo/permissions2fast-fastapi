@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, union
 
 from ..models.permission_assignment_model import PermissionAssignment
-from ..models.user_role_model import UserRole
+from ..models.user_role_model import RoleUser
 from ..models.permission_route_model import PermissionRoute
 from ..models.route_model import Route
 
@@ -60,11 +60,11 @@ async def check_user_access(
     role_perms = (
         select(PermissionAssignment.permission_id)
         .join(
-            UserRole,
-            (UserRole.role_id == PermissionAssignment.entity_id)
+            RoleUser,
+            (RoleUser.role_id == PermissionAssignment.entity_id)
             & (PermissionAssignment.entity_type == "Role"),
         )
-        .where(UserRole.user_id == user_id)
+        .where(RoleUser.user_id == user_id)
     )
     user_perm_ids_query = union(direct_perms, role_perms).subquery()
 
