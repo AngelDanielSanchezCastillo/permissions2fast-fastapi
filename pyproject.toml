@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "permissions2fast-fastapi"
-version = "0.7.0"
+version = "0.7.1"
 description = "Role-based access control (RBAC) and permission management extension for oauth2fast-fastapi"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -61,7 +61,11 @@ where = ["src"]
 include = ["permissions2fast_fastapi*"]
 
 [tool.setuptools.package-data]
-"permissions2fast_fastapi" = ["seeders/*.json"]
+"permissions2fast_fastapi" = [
+    "seeders/manifest.json",
+    "seeders/dev/*.json",
+    "seeders/prod/*.json",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
