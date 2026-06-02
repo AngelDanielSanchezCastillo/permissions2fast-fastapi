@@ -259,19 +259,19 @@ async def delete_role_permission(
 
 @router.post(
     "/assign",
-    response_model=UserRoleCreatedResponse,
-    responses={400: {"model": UserRoleErrorResponse}},
+    response_model=RoleUserCreatedResponse,
+    responses={400: {"model": RoleUserErrorResponse}},
 )
 async def assign_user_role(
     assignment_data: UserRoleCreate,
     session: AsyncSession = Depends(get_auth_session),
-) -> JSONResponse | UserRoleCreatedResponse:
+) -> JSONResponse | RoleUserCreatedResponse:
     """Assign a role to a user."""
     try:
         user_role = await role_service.assign_user_role(
             assignment_data.user_id, assignment_data.role_id, session
         )
-        return UserRoleCreatedResponse(
+        return RoleUserCreatedResponse(
             user_role=RoleUserResponse(
                 user_id=user_role.user_id,
                 role_id=user_role.role_id,

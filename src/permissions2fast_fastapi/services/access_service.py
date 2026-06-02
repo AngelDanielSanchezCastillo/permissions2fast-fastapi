@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, union
 
 from ..models.permission_assignment_model import PermissionAssignment
-from ..models.user_role_model import RoleUser
+from ..models.role_user_model import RoleUser
 from ..models.permission_route_model import PermissionRoute
 from ..models.route_model import Route
 

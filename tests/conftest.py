@@ -37,7 +37,7 @@ from permissions2fast_fastapi.models import (
     permission_model,
     permission_category_model,
     route_model,
-    user_role_model,
+    role_user_model,
     permission_assignment_model,
     permission_route_model,
 )

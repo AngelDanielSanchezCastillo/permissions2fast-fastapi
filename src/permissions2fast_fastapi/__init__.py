@@ -11,7 +11,7 @@ from .models.role_model import Role
 from .models.permission_model import Permission
 from .models.permission_category_model import PermissionCategory
 from .models.route_model import Route
-from .models.user_role_model import RoleUser
+from .models.role_user_model import RoleUser
 from .models.permission_assignment_model import PermissionAssignment
 from .models.permission_route_model import PermissionRoute
 

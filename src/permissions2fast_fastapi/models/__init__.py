@@ -2,7 +2,7 @@ from .role_model import Role
 from .permission_model import Permission
 from .permission_category_model import PermissionCategory
 from .route_model import Route
-from .user_role_model import RoleUser
+from .role_user_model import RoleUser
 from .permission_assignment_model import PermissionAssignment
 from .permission_route_model import PermissionRoute
 
@@ -11,7 +11,7 @@ __all__ = [
     "Permission",
     "PermissionCategory",
     "Route",
-    "UserRole",
+    "RoleUser",
     "PermissionAssignment",
     "PermissionRoute",
 ]

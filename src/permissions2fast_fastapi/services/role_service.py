@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, delete
 
 from ..models.role_model import Role
-from ..models.user_role_model import RoleUser
+from ..models.role_user_model import RoleUser
 from ..models.permission_assignment_model import PermissionAssignment
 from ..models.permission_model import Permission
 from ..utils.redis_client import invalidate_user_cache

@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from permissions2fast_fastapi.models.role_model import Role
-from permissions2fast_fastapi.models.user_role_model import RoleUser
+from permissions2fast_fastapi.models.role_user_model import RoleUser
 from permissions2fast_fastapi.models.permission_category_model import PermissionCategory
 from permissions2fast_fastapi.models.permission_model import Permission
 from permissions2fast_fastapi.models.route_model import Route
