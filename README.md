@@ -2,6 +2,8 @@
 
 🔒 Role-Based Access Control (RBAC) extension for `oauth2fast-fastapi`.
 
+> 📖 **Conventions reference**: this package follows the [2fast-handbook](https://github.com/AngelDanielSanchezCastillo/2fast-handbook) for ecosystem conventions (structure, versioning, README, commits, release).
+
 Easily manage user roles and permissions in your FastAPI application with support for High-Performance Redis Caching.
 
 ## Features
