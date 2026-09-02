@@ -69,6 +69,7 @@ version = {attr = "permissions2fast_fastapi.__version__.__version__"}
     "seeders/manifest.json",
     "seeders/dev/*.json",
     "seeders/prod/*.json",
+    "skills/*.md",
 ]
 
 [tool.pytest.ini_options]
