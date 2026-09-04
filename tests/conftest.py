@@ -10,9 +10,16 @@ from fastapi import FastAPI
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import SQLModel
 
-# Load environment variables from Backend-Metal-ERP
+# Load environment variables from Backend-Metal-ERP (if present); a missing
+# .env is tolerated so that self-contained SQLite tests can run in isolation.
 env_path = Path("/Users/angeldanielsanchezcastillo/Repos/GitHub/Backend-Metal-ERP/.env")
-load_dotenv(env_path)
+if env_path.exists():
+    load_dotenv(env_path)
+
+# Fallback secrets so importing oauth2fast settings does not crash when no real
+# .env is present. setdefault honors an explicitly-provided env var. DB-backed
+# fixtures only connect when a real .env supplies credentials.
+os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
 
 # Import from oauth2fast-fastapi
 from oauth2fast_fastapi import (

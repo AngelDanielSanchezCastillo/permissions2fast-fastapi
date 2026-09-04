@@ -4,7 +4,7 @@ description: "Trigger: working on or with permissions2fast-fastapi. App-level RB
 license: MIT
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "2.0"
+  version: "2.1"
 ---
 
 ## Purpose
@@ -66,13 +66,23 @@ priority 60, manifest `categories`/`roles`/`permissions`, idempotent by `id`).
 ## Route seeding (global manifest)
 
 A global **route manifest** can seed `routes`, `permission_routes`, and
-`role_users` rows on the auth DB for app-level (GLOBAL) routes. Every global
-route declares its explicit config roles (Admin/SuperAdmin/Manager/User) —
-there is **no OWNER default** at the global plane (OWNER exists only in the
-tenant plane of tenants2fast). A global route without roles gets no default
-and must be reviewed. Seeding is idempotent by route `id` (insert-if-missing),
-and the app override **extends** the base tables rather than replacing them.
-See `docs/route-seeding.md` for the manifest contract.
+`roles` rows on the auth DB for app-level (GLOBAL) routes. This is the RBAC
+standardization D2 home of the GLOBAL route+link inserter — the app slims to a
+declarative manifest and calls the package seeder instead of re-implementing.
+
+- `RouteSpec(method, path, permission=None, roles=[], profile={"dev","prod"})`
+  and `seed_global_routes(session, manifest, profile="prod")` are exported from
+  the top-level package. Route natural key is `name` = `"METHOD path"`.
+- Every global route declares its explicit config roles
+  (Admin/SuperAdmin/Manager/User) — there is **no OWNER default** at the global
+  plane (OWNER exists only in the tenant plane of tenants2fast). A global route
+  without roles gets no role assignment and must be reviewed.
+- Profile-aware: dev-only routes are excluded when running `prod`.
+- Idempotent via the shared `pgsqlasync2fast.insert_if_missing` primitive
+  (insert-if-missing by `name`, never duplicated on re-run), NOT the package's
+  `register_seeder` orchestrator (that base seeder only covers
+  categories/roles/permissions).
+- See `docs/route-seeding.md` for the manifest contract and example.
 
 ## Conventions
 

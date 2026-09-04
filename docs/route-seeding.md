@@ -6,7 +6,8 @@ This complements the base seeder (`categories`/`roles`/`permissions`) with a
 manifest-driven route grant layer.
 
 The seeding is driven by an **app-owned manifest** and is **idempotent**
-(insert-if-missing by route `id`), so re-running it never duplicates rows.
+(insert-if-missing by route natural key `name`), so re-running it never
+duplicates rows.
 
 ## Scope
 
@@ -33,23 +34,24 @@ Seed rules:
 
 1. **Profile filter** — only rows whose `profile` set contains the active
    profile are seeded; dev-only roles are excluded when running `prod`.
-2. **Insert-if-missing by id** — existing route/permission_route/role_user rows
-   are left untouched; only missing e rows are inserted.
-3. **Override extends base** — app-level registration extends the base tables
-   (roles/permissions from the package) instead of replacing them, preserving
-   the package's auto-registered seed data.
+2. **Insert-if-missing by natural key** — existing route rows
+   (keyed by `name` = `"METHOD path"`), permission_routes and roles are left
+   untouched; only missing rows are inserted (via the shared
+   `pgsqlasync2fast.insert_if_missing` primitive).
+3. **No OWNER default** — a global route with no explicit `roles` gets no role
+   assignment and must be reviewed.
 
 ## Example
 
 ```python
-from backend.app.rbac_route_manifest import RouteSpec, seed_routes_links
+from permissions2fast_fastapi import RouteSpec, seed_global_routes
 
 manifest = [
     RouteSpec(
         method="GET",
-        path="/users",
-        permission=None,
-        roles=["Admin", "Manager"],
+        path="/tenants/control",
+        permission="tenants_control",
+        roles=["Admin"],
         profile={"dev", "prod"},
     ),
     # dev-only route
@@ -62,11 +64,12 @@ manifest = [
     ),
 ]
 
-summary = await seed_routes_links(conn, session, manifest, profile="prod")
+summary = await seed_global_routes(session, manifest, profile="prod")
 ```
 
 After seeding with `profile="prod"`, the `DELETE /debug/cache` dev-only row is
-**not** present (excluded by the profile filter).
+**not** present (excluded by the profile filter). `summary` returns
+`{"routes", "links", "roles", "errors"}` counts.
 
 ## Integration
 

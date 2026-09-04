@@ -15,13 +15,11 @@ from .models.role_user_model import RoleUser
 from .models.permission_assignment_model import PermissionAssignment
 from .models.permission_route_model import PermissionRoute
 
+# GLOBAL route+link seeding (RBAC standardization D2)
+from .services.route_seeder import RouteSpec, seed_global_routes
+
 # Import seeder components from pgsqlasync2fast-fastapi
 from pgsqlasync2fast_fastapi import SeederConfig, register_seeder
-
-# Import models for seeding (used by the orchestrator via model_classes)
-from .models.role_model import Role
-from .models.permission_category_model import PermissionCategory
-from .models.permission_model import Permission
 
 
 def get_seeder_config():
@@ -68,6 +66,9 @@ __all__ = [
     "RoleUser",
     "PermissionAssignment",
     "PermissionRoute",
+    # GLOBAL route+link seeding (RBAC standardization D2)
+    "RouteSpec",
+    "seed_global_routes",
     # Seeder system
     "get_seeder_config",
 ]
