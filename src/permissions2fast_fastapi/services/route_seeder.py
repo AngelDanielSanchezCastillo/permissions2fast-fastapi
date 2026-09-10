@@ -9,6 +9,8 @@ GLOBAL rules:
 - Route natural key is `name` (e.g. ``"POST /register-user"``).
 - explicit config roles only — there is **no OWNER role** at the global plane.
   A global route without roles gets no role assignment and must be reviewed.
+- every role declared on a route with a ``permission`` gets a
+  ``PermissionAssignment`` grant (``entity_type="Role"``, UQ-protected).
 - profile-aware: dev-only routes are excluded when running ``prod``.
 - idempotent via the shared ``pgsqlasync2fast.insert_if_missing`` primitive.
 """
@@ -19,6 +21,9 @@ from dataclasses import dataclass, field
 
 from pgsqlasync2fast_fastapi.seeder import insert_if_missing
 
+from permissions2fast_fastapi.models.permission_assignment_model import (
+    PermissionAssignment,
+)
 from permissions2fast_fastapi.models.permission_model import Permission
 from permissions2fast_fastapi.models.permission_route_model import PermissionRoute
 from permissions2fast_fastapi.models.role_model import Role
@@ -56,32 +61,44 @@ async def seed_global_routes(
             are skipped.
 
     Returns:
-        A summary dict: ``{"routes", "links", "roles", "errors"}`` counts.
+        A summary dict: ``{"routes", "links", "roles", "grants", "errors"}``
+        counts.
     """
-    summary: dict[str, int] = {"routes": 0, "links": 0, "roles": 0, "errors": 0}
+    summary: dict[str, int] = {
+        "routes": 0,
+        "links": 0,
+        "roles": 0,
+        "grants": 0,
+        "errors": 0,
+    }
 
     for spec in manifest:
         if profile not in spec.profile:
             continue
         try:
-            await _seed_global_route(session, spec)
+            grants = await _seed_global_route(session, spec)
             summary["routes"] += 1
             if spec.permission:
                 summary["links"] += 1
             summary["roles"] += len(spec.roles)
+            summary["grants"] += grants
         except Exception:
             summary["errors"] += 1
 
     return summary
 
 
-async def _seed_global_route(session, spec: RouteSpec) -> None:
-    """Insert/update one GLOBAL route (route + permission link + roles)."""
+async def _seed_global_route(session, spec: RouteSpec) -> int:
+    """Insert/update one GLOBAL route (route + permission link + roles + grants).
+
+    Returns the number of role→permission grants created for this route.
+    """
     route_name = f"{spec.method} {spec.path}"
     route = await insert_if_missing(
         session, Route, lookup={"name": route_name}, defaults={"is_active": True}
     )
 
+    grants = 0
     if spec.permission:
         permission = await insert_if_missing(
             session,
@@ -99,9 +116,22 @@ async def _seed_global_route(session, spec: RouteSpec) -> None:
         )
 
     for role_name in spec.roles:
-        await insert_if_missing(
+        role = await insert_if_missing(
             session,
             Role,
             lookup={"name": role_name},
             defaults={"is_active": True},
         )
+        if spec.permission:
+            await insert_if_missing(
+                session,
+                PermissionAssignment,
+                lookup={
+                    "permission_id": permission.id,
+                    "entity_type": "Role",
+                    "entity_id": role.id,
+                },
+            )
+            grants += 1
+
+    return grants

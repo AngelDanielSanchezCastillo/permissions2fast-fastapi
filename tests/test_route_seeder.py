@@ -19,12 +19,11 @@ Run with:
 from __future__ import annotations
 
 import pytest
+from oauth2fast_fastapi.models.bases import AuthModel
 from sqlalchemy import BigInteger
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlmodel.ext.asyncio.session import AsyncSession
-
-from oauth2fast_fastapi.models.bases import AuthModel
 
 
 @compiles(BigInteger, "sqlite")
@@ -37,15 +36,17 @@ DB_URL = "sqlite+aiosqlite:///:memory:"
 
 async def _auth_engine():
     # Force model registration on the shared AuthModel metadata
-    from permissions2fast_fastapi.models.route_model import Route  # noqa: F401
-    from permissions2fast_fastapi.models.permission_model import Permission  # noqa: F401
+    from permissions2fast_fastapi.models.permission_category_model import (  # noqa: F401
+        PermissionCategory,
+    )
+    from permissions2fast_fastapi.models.permission_model import (
+        Permission,  # noqa: F401
+    )
     from permissions2fast_fastapi.models.permission_route_model import (  # noqa: F401
         PermissionRoute,
     )
     from permissions2fast_fastapi.models.role_model import Role  # noqa: F401
-    from permissions2fast_fastapi.models.permission_category_model import (  # noqa: F401
-        PermissionCategory,
-    )
+    from permissions2fast_fastapi.models.route_model import Route  # noqa: F401
 
     engine = create_async_engine(DB_URL, echo=False)
     async with engine.begin() as conn:
@@ -70,10 +71,10 @@ async def test_seed_global_routes_inserts_route_permission_role():
     """Global scope inserts route + permission + role into auth DB idempotently."""
     from sqlalchemy import text
 
-    from permissions2fast_fastapi.services.route_seeder import seed_global_routes
     from permissions2fast_fastapi.models.permission_category_model import (
         PermissionCategory,
     )
+    from permissions2fast_fastapi.services.route_seeder import seed_global_routes
 
     engine = await _auth_engine()
     async with AsyncSession(engine) as session:
@@ -107,7 +108,9 @@ async def test_seed_global_routes_inserts_route_permission_role():
         await seed_global_routes(session, manifest, "dev")
         await session.commit()
         async with engine.connect() as conn:
-            n_routes = (await conn.execute(text("SELECT COUNT(*) FROM routes"))).scalar()
+            n_routes = (
+                await conn.execute(text("SELECT COUNT(*) FROM routes"))
+            ).scalar()
             n_perms = (
                 await conn.execute(text("SELECT COUNT(*) FROM permissions"))
             ).scalar()
@@ -130,7 +133,9 @@ async def test_seed_global_routes_prod_excludes_dev_only_route():
     async with AsyncSession(engine) as session:
         manifest = [
             _spec("DELETE", "/debug/cache", None, ["Admin"], {"dev"}),
-            _spec("GET", "/tenants/control", "tenants_control", ["Admin"], {"dev", "prod"}),
+            _spec(
+                "GET", "/tenants/control", "tenants_control", ["Admin"], {"dev", "prod"}
+            ),
         ]
         summary = await seed_global_routes(session, manifest, "prod")
         await session.commit()
@@ -168,4 +173,171 @@ async def test_seed_global_route_without_roles_gets_no_role():
         # No roles created for a global route without explicit roles
         assert roles == []
         assert summary["roles"] == 0
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_seed_global_routes_creates_role_grants():
+    """Route with permission and roles creates one PermissionAssignment per role."""
+    from sqlalchemy import text
+
+    from permissions2fast_fastapi.models.permission_category_model import (
+        PermissionCategory,
+    )
+    from permissions2fast_fastapi.services.route_seeder import seed_global_routes
+
+    engine = await _auth_engine()
+    async with AsyncSession(engine) as session:
+        session.add(PermissionCategory(name="config"))
+        await session.flush()
+
+        manifest = [
+            _spec(
+                "POST",
+                "/register-user",
+                "register_user",
+                ["Admin", "SuperAdmin"],
+                {"dev", "prod"},
+            )
+        ]
+        summary = await seed_global_routes(session, manifest, "dev")
+        await session.commit()
+
+        async with engine.connect() as conn:
+            grants = (
+                await conn.execute(
+                    text(
+                        "SELECT pa.entity_type, r.name, p.name "
+                        "FROM permission_assignments pa "
+                        "JOIN roles r ON r.id = pa.entity_id "
+                        "JOIN permissions p ON p.id = pa.permission_id "
+                        "ORDER BY r.name"
+                    )
+                )
+            ).all()
+
+        # exactly one grant per declared role, polymorphic entity_type="Role"
+        assert [g[0] for g in grants] == ["Role", "Role"]
+        assert [(g[1], g[2]) for g in grants] == [
+            ("Admin", "register_user"),
+            ("SuperAdmin", "register_user"),
+        ]
+        assert summary["grants"] == 2
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_seed_global_routes_grant_idempotent():
+    """Double-seed leaves exactly 1 grant row per role (UQ-protected)."""
+    from sqlalchemy import text
+
+    from permissions2fast_fastapi.models.permission_category_model import (
+        PermissionCategory,
+    )
+    from permissions2fast_fastapi.services.route_seeder import seed_global_routes
+
+    engine = await _auth_engine()
+    async with AsyncSession(engine) as session:
+        session.add(PermissionCategory(name="config"))
+        await session.flush()
+
+        manifest = [
+            _spec(
+                "POST",
+                "/register-user",
+                "register_user",
+                ["Admin"],  # only one role to make the exact-1 check unambiguous
+                {"dev", "prod"},
+            )
+        ]
+        await seed_global_routes(session, manifest, "dev")
+        await seed_global_routes(session, manifest, "dev")
+        await session.commit()
+
+        async with engine.connect() as conn:
+            n_grants = (
+                await conn.execute(text("SELECT COUNT(*) FROM permission_assignments"))
+            ).scalar()
+            n_roles = (await conn.execute(text("SELECT COUNT(*) FROM roles"))).scalar()
+
+        assert n_roles == 1
+        assert n_grants == 1  # second run inserted nothing
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_seed_global_routes_no_permission_no_grant():
+    """Route without permission creates no PermissionAssignment rows."""
+    from sqlalchemy import text
+
+    from permissions2fast_fastapi.services.route_seeder import seed_global_routes
+
+    engine = await _auth_engine()
+    async with AsyncSession(engine) as session:
+        manifest = [
+            _spec("GET", "/open-to-review", None, ["Admin"], {"dev", "prod"}),
+        ]
+        summary = await seed_global_routes(session, manifest, "dev")
+        await session.commit()
+
+        async with engine.connect() as conn:
+            n_grants = (
+                await conn.execute(text("SELECT COUNT(*) FROM permission_assignments"))
+            ).scalar()
+
+        assert n_grants == 0
+        assert summary["grants"] == 0
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_seed_global_routes_prod_excludes_dev_only_grants():
+    """prod must not create grants for dev-only routes (profile-aware)."""
+    from sqlalchemy import text
+
+    from permissions2fast_fastapi.models.permission_category_model import (
+        PermissionCategory,
+    )
+    from permissions2fast_fastapi.services.route_seeder import seed_global_routes
+
+    engine = await _auth_engine()
+    async with AsyncSession(engine) as session:
+        session.add(PermissionCategory(name="config"))
+        await session.flush()
+
+        manifest = [
+            _spec(
+                "DELETE",
+                "/debug/cache",
+                "debug_cache",
+                ["SuperAdmin"],
+                {"dev"},
+            ),
+            _spec(
+                "GET",
+                "/tenants/control",
+                "tenants_control",
+                ["Admin"],
+                {"dev", "prod"},
+            ),
+        ]
+        summary = await seed_global_routes(session, manifest, "prod")
+        await session.commit()
+
+        async with engine.connect() as conn:
+            grants = (
+                await conn.execute(
+                    text(
+                        "SELECT r.name, p.name "
+                        "FROM permission_assignments pa "
+                        "JOIN roles r ON r.id = pa.entity_id "
+                        "JOIN permissions p ON p.id = pa.permission_id"
+                    )
+                )
+            ).all()
+
+        # only the prod-profile route's role got a grant
+        assert [(g[0], g[1]) for g in grants] == [("Admin", "tenants_control")]
+        assert summary["grants"] == 1
+        assert summary["routes"] == 1
     await engine.dispose()
