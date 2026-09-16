@@ -1,7 +1,8 @@
 # Route Seeding (Global Manifest)
 
-`permissions2fast-fastapi` supports seeding **routes, permission_routes, and
-role_users** rows on the auth database for application-level (GLOBAL) routes.
+`permissions2fast-fastapi` supports seeding **routes, permission_routes,
+roles, and role→permission grants** rows on the auth database for
+application-level (GLOBAL) routes.
 This complements the base seeder (`categories`/`roles`/`permissions`) with a
 manifest-driven route grant layer.
 
@@ -35,10 +36,16 @@ Seed rules:
 1. **Profile filter** — only rows whose `profile` set contains the active
    profile are seeded; dev-only roles are excluded when running `prod`.
 2. **Insert-if-missing by natural key** — existing route rows
-   (keyed by `name` = `"METHOD path"`), permission_routes and roles are left
-   untouched; only missing rows are inserted (via the shared
+   (keyed by `name` = `"METHOD path"`), permission_routes, roles and grants are
+   left untouched; only missing rows are inserted (via the shared
    `pgsqlasync2fast.insert_if_missing` primitive).
-3. **No OWNER default** — a global route with no explicit `roles` gets no role
+3. **Grants** — when a route declares a `permission`, every role in its
+   `roles` list receives a `PermissionAssignment` row with
+   `entity_type="Role"` and `entity_id=<role id>`. The existing
+   `uq_permission_assignment` unique constraint makes grant seeding
+   idempotent: re-running the seeder never duplicates a grant. Routes without
+   a permission create no grants.
+4. **No OWNER default** — a global route with no explicit `roles` gets no role
    assignment and must be reviewed.
 
 ## Example
@@ -69,7 +76,8 @@ summary = await seed_global_routes(session, manifest, profile="prod")
 
 After seeding with `profile="prod"`, the `DELETE /debug/cache` dev-only row is
 **not** present (excluded by the profile filter). `summary` returns
-`{"routes", "links", "roles", "errors"}` counts.
+`{"routes", "links", "roles", "grants", "errors"}` counts — `grants` is one
+per role→permission pair created for seeded routes.
 
 ## Integration
 
