@@ -10,7 +10,6 @@ scoped to this chain's tables. Alembic fixes ``env_py_location`` at
 """
 
 from alembic import context
-
 from pgsqlasync2fast_fastapi.migrations import (
     run_migrations_offline,
     run_migrations_online,

@@ -86,7 +86,7 @@ def test_auth_lane_orders_oauth_before_permissions():
     # spec in the auth lane.
     chains = get_lane_chains("auth")
     assert chains
-    assert [c.package for c in chains][0] == "oauth2fast_fastapi"
+    assert next(c.package for c in chains) == "oauth2fast_fastapi"
     assert _permissions_spec() in chains
 
 
@@ -111,7 +111,8 @@ def test_baseline_0001_initial_parseable_and_owns_exactly_seven_tables():
     filepath = rev.path
     assert filepath.endswith("0001_initial.py"), filepath
 
-    text = open(filepath).read()
+    with open(filepath) as fh:
+        text = fh.read()
     for table in sorted(OWNED):
         assert f"op.create_table('{table}'" in text
     # Ownership boundary: the foreign users table must NOT be proposed.
