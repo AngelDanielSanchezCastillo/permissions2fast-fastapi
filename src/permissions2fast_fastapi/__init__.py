@@ -55,6 +55,9 @@ def get_seeder_config():
 # Register this package's seeder with the orchestrator
 register_seeder(get_seeder_config())
 
+# Register the permissions-global Alembic chain under the "auth" lane at
+# import time (mirrors the register_seeder idiom; alembic-2fast change).
+from . import migrations as _migrations  # noqa: F401
 
 __all__ = [
     "__version__",

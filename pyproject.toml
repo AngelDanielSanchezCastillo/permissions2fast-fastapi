@@ -27,9 +27,16 @@ classifiers = [
 ]
 
 dependencies = [
-    "oauth2fast-fastapi>=0.4.6",
+    # 0.5.0 ships the oauth chain that must run first in the auth lane
+    # (alembic-2fast change).
+    "oauth2fast-fastapi>=0.5.0",
     "rbac2fast-core>=0.1.1",
-    "pgsqlasync2fast-fastapi>=0.4.0",
+    # Exact pin: 0.5.0 ships the shared Alembic runner/env/registry that the
+    # permissions chain depends on (alembic-2fast change).
+    "pgsqlasync2fast-fastapi==0.5.0",
+    # Exact pin per the alembic-2fast migration change: deliberate re-pins
+    # require a version bump and a full test run. Never use a range here.
+    "alembic==1.20.0",
 ]
 
 [dependency-groups]
@@ -72,6 +79,9 @@ version = {attr = "permissions2fast_fastapi.__version__.__version__"}
     "seeders/dev/*.json",
     "seeders/prod/*.json",
     "skills/*.md",
+    # Package-owned Alembic chain (alembic-2fast): shipped in the wheel and
+    # resolved from the installed release, never a checkout.
+    "migrations/**/*.py",
 ]
 
 [tool.pytest.ini_options]
