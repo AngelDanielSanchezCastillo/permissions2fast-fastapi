@@ -5,21 +5,20 @@ Complete RBAC (Role-Based Access Control) system for FastAPI applications.
 Provides role management, permission checking, and user-role assignments.
 """
 
-from .__version__ import __version__
+# Import seeder components from pgsqlasync2fast-fastapi
+from pgsqlasync2fast_fastapi import SeederConfig, register_seeder
 
-from .models.role_model import Role
-from .models.permission_model import Permission
-from .models.permission_category_model import PermissionCategory
-from .models.route_model import Route
-from .models.role_user_model import RoleUser
+from .__version__ import __version__
 from .models.permission_assignment_model import PermissionAssignment
+from .models.permission_category_model import PermissionCategory
+from .models.permission_model import Permission
 from .models.permission_route_model import PermissionRoute
+from .models.role_model import Role
+from .models.role_user_model import RoleUser
+from .models.route_model import Route
 
 # GLOBAL route+link seeding (RBAC standardization D2)
 from .services.route_seeder import RouteSpec, seed_global_routes
-
-# Import seeder components from pgsqlasync2fast-fastapi
-from pgsqlasync2fast_fastapi import SeederConfig, register_seeder
 
 
 def get_seeder_config():
@@ -55,6 +54,9 @@ def get_seeder_config():
 # Register this package's seeder with the orchestrator
 register_seeder(get_seeder_config())
 
+# Register the permissions-global Alembic chain under the "auth" lane at
+# import time (mirrors the register_seeder idiom; alembic-2fast change).
+from . import migrations as _migrations  # noqa: F401
 
 __all__ = [
     "__version__",
