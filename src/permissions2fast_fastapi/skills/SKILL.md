@@ -4,7 +4,7 @@ description: "Trigger: working on or with permissions2fast-fastapi. App-level RB
 license: MIT
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "2.1"
+  version: "2.2"
 ---
 
 ## Purpose
@@ -22,7 +22,7 @@ tenants2fast's separate `tenant_metadata` registry).
 ## Public API
 
 - `has_permission(permission_route=None, method=None)` — first arg is a **route path**, never a permission name; no arg auto-detects via `request.scope["route"].path` (template such as `/roles/user/{user_id}`).
-- `has_role(role_name)`; both chain `get_current_verified_user` + `get_auth_session` (403 in Spanish when denied).
+- `has_role(role_name)`; both chain `get_current_verified_user` + `get_auth_session` and raise `AuthError` (tools2fast) with HTTP 403 and `error.type` = `RoleMissing` / `PermissionDenied` (no `WWW-Authenticate`). Install `install_auth_error_handler(app)` once at startup for the project envelope.
 - Routers (`/permissions`, `/roles`, `/routes`) are ALL gated with `Depends(has_permission())` — a fresh DB returns 403 until routes, permissions, and grants are seeded.
 - Services are module functions: `access_service.check_user_access(user_id, route_path, method, session)`, `role_service`, `permission_service`, `route_service`.
 

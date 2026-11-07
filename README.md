@@ -28,6 +28,15 @@ This package uses the same database connection logic as `oauth2fast-fastapi`. Co
 ### Basic Settings
 
 ```bash
+# JWT / refresh tokens (shared with oauth2fast-fastapi)
+SECRET_KEY=your-secure-secret-key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_MINUTES=10080
+REFRESH_COOKIE_SECURE=true
+REFRESH_COOKIE_SAMESITE=strict
+# REDIS_URL=redis://localhost:6379/0
+
 # Database Configuration
 DB_CONNECTIONS__AUTH__USERNAME=db_user
 DB_CONNECTIONS__AUTH__PASSWORD=db_password
@@ -58,8 +67,10 @@ PERMISSIONS_REDIS__DB=0
 from fastapi import FastAPI
 from permissions2fast_fastapi import permissions_router, roles_router
 from oauth2fast_fastapi import router as auth_router
+from tools2fast_fastapi import install_auth_error_handler
 
 app = FastAPI()
+install_auth_error_handler(app)  # standardized 401/403 envelope
 
 app.include_router(auth_router)
 app.include_router(permissions_router)
@@ -69,6 +80,11 @@ app.include_router(roles_router)
 ### 2. Protecting Routes
 
 Use the provided dependencies to restrict access to endpoints. The system will automatically check Redis cache if enabled, and fallback to database queries if needed.
+
+Denials are HTTP 403 with a stable `error.type` (`RoleMissing` or
+`PermissionDenied`) and no `WWW-Authenticate` header, so clients can show an
+authorization error without logging the user out. Install
+`install_auth_error_handler(app)` once at startup to get the project envelope.
 
 ```python
 from fastapi import Depends
