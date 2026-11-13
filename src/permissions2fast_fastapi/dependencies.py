@@ -6,12 +6,13 @@ Dependencies for protecting routes based on roles and permissions.
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
-from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi import Depends, Request
+from oauth2fast_fastapi import User
 
 # Import from oauth2fast-fastapi directly
-from oauth2fast_fastapi.dependencies import get_current_verified_user, get_auth_session
-from oauth2fast_fastapi import User
+from oauth2fast_fastapi.dependencies import get_auth_session, get_current_verified_user
+from sqlmodel.ext.asyncio.session import AsyncSession
+from tools2fast_fastapi import AuthError
 
 from .services import access_service, role_service
 
@@ -28,6 +29,7 @@ def has_role(
         def admin_route(user: User = Depends(has_role("admin"))):
             ...
     """
+
     async def _has_role(
         user: Annotated[User, Depends(get_current_verified_user)],
         session: Annotated[AsyncSession, Depends(get_auth_session)],
@@ -37,9 +39,10 @@ def has_role(
         has_required = any(r.name == role_name for r in user_roles)
 
         if not has_required:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing required role: {role_name}",
+            raise AuthError(
+                error_code="RoleMissing",
+                message=f"Rol requerido: {role_name}",
+                status_code=403,
             )
 
         return user
@@ -67,6 +70,7 @@ def has_permission(
         def items(user: User = Depends(has_permission(permission_route="/api/items", method="GET"))):
             ...
     """
+
     async def _has_permission(
         request: Request,
         user: Annotated[User, Depends(get_current_verified_user)],
@@ -86,9 +90,10 @@ def has_permission(
         )
 
         if not is_allowed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions to access this resource",
+            raise AuthError(
+                error_code="PermissionDenied",
+                message="Permisos insuficientes para acceder a este recurso",
+                status_code=403,
             )
 
         return user

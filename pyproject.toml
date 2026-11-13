@@ -27,9 +27,11 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.5.0 ships the oauth chain that must run first in the auth lane
-    # (alembic-2fast change).
-    "oauth2fast-fastapi>=0.5.0",
+    # 0.6.0 ships the standardized auth error contract (AuthError) and the
+    # oauth chain that must run first in the auth lane (alembic-2fast change).
+    "oauth2fast-fastapi>=0.6.0",
+    # Direct imports of AuthError, APIResponse and ErrorDetail.
+    "tools2fast-fastapi>=0.3.14",
     "rbac2fast-core>=0.1.1",
     # Exact pin: 0.5.0 ships the shared Alembic runner/env/registry that the
     # permissions chain depends on (alembic-2fast change).
