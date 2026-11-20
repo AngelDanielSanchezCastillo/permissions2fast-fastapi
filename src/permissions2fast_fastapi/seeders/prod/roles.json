@@ -1,12 +1,12 @@
 [
   {
     "id": 1,
-    "name": "Admin",
+    "name": "admin",
     "description": "System administrator"
   },
   {
     "id": 2,
-    "name": "User",
+    "name": "user",
     "description": "Standard user"
   }
 ]

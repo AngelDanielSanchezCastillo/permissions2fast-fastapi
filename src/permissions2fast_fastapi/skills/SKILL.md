@@ -23,6 +23,8 @@ tenants2fast's separate `tenant_metadata` registry).
 
 - `has_permission(permission_route=None, method=None)` — first arg is a **route path**, never a permission name; no arg auto-detects via `request.scope["route"].path` (template such as `/roles/user/{user_id}`).
 - `has_role(role_name)`; both chain `get_current_verified_user` + `get_auth_session` and raise `AuthError` (tools2fast) with HTTP 403 and `error.type` = `RoleMissing` / `PermissionDenied` (no `WWW-Authenticate`). Install `install_auth_error_handler(app)` once at startup for the project envelope.
+- **Bootstrap flow**: `python -m permissions2fast_fastapi.scripts.assign_role --email <email> --role <role>` assigns a role (creates if missing). Pair with `python -m oauth2fast_fastapi.scripts.create_admin --email <email>` to create the user first.
+- Base roles (`admin`, `user`, `manager`, `guest`) are auto-seeded at startup from `seeders/{dev,prod}/roles.json` (names are **lowercase** to match `has_role()` case-sensitively).
 - Routers (`/permissions`, `/roles`, `/routes`) are ALL gated with `Depends(has_permission())` — a fresh DB returns 403 until routes, permissions, and grants are seeded.
 - Services are module functions: `access_service.check_user_access(user_id, route_path, method, session)`, `role_service`, `permission_service`, `route_service`.
 

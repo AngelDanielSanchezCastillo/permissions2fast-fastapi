@@ -64,20 +64,43 @@ PERMISSIONS_REDIS__DB=0
 ### 1. Basic Integration
 
 ```python
-from fastapi import FastAPI
-from permissions2fast_fastapi import permissions_router, roles_router
-from oauth2fast_fastapi import router as auth_router
+from fastapi import FastAPI, Depends
+from permissions2fast_fastapi import permissions_router, roles_router, has_role
+from oauth2fast_fastapi import public_router, admin_router
 from tools2fast_fastapi import install_auth_error_handler
 
 app = FastAPI()
 install_auth_error_handler(app)  # standardized 401/403 envelope
 
-app.include_router(auth_router)
+# Public auth endpoints (token, register, verify-email, logout)
+app.include_router(public_router)
+
+# Admin auth endpoints with RBAC injection
+app.include_router(admin_router, dependencies=[Depends(has_role("admin"))])
+
+# Permissions and roles management (protect as needed)
 app.include_router(permissions_router)
 app.include_router(roles_router)
 ```
 
-### 2. Protecting Routes
+### 2. Bootstrap an Admin User
+
+```bash
+# 1. Create admin user (verified, no roles)
+python -m oauth2fast_fastapi.scripts.create_admin \
+    --email admin@example.com \
+    --password 'StrongPassword123'
+
+# 2. Assign admin role (creates role if it doesn't exist)
+python -m permissions2fast_fastapi.scripts.assign_role \
+    --email admin@example.com \
+    --role admin
+```
+
+Base roles (`admin`, `user`, `manager`, `guest`) are auto-seeded at startup
+by the `pgsqlasync2fast-fastapi` orchestrator from `seeders/{dev,prod}/roles.json`.
+
+### 3. Protecting Routes
 
 Use the provided dependencies to restrict access to endpoints. The system will automatically check Redis cache if enabled, and fallback to database queries if needed.
 
