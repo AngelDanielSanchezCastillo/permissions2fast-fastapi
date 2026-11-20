@@ -27,9 +27,10 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.6.0 ships the standardized auth error contract (AuthError) and the
-    # oauth chain that must run first in the auth lane (alembic-2fast change).
-    "oauth2fast-fastapi>=0.6.0",
+    # 0.7.0 ships the standardized auth error contract (AuthError), the
+    # oauth chain that must run first in the auth lane (alembic-2fast change),
+    # and the router split (public_router + admin_router).
+    "oauth2fast-fastapi>=0.7.0",
     # Direct imports of AuthError, APIResponse and ErrorDetail.
     "tools2fast-fastapi>=0.3.14",
     "rbac2fast-core>=0.1.1",
