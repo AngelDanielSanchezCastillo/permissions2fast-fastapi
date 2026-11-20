@@ -27,18 +27,17 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.7.0 ships the standardized auth error contract (AuthError), the
-    # oauth chain that must run first in the auth lane (alembic-2fast change),
-    # and the router split (public_router + admin_router).
+    # 0.7.0+ ships the standardized auth error contract (AuthError), the
+    # oauth chain that must run first in the auth lane, and the router
+    # split (public_router + admin_router).
     "oauth2fast-fastapi>=0.7.0",
     # Direct imports of AuthError, APIResponse and ErrorDetail.
     "tools2fast-fastapi>=0.3.14",
     "rbac2fast-core>=0.1.1",
-    # Exact pin: 0.5.0 ships the shared Alembic runner/env/registry that the
-    # permissions chain depends on (alembic-2fast change).
+    # 0.5.2+ ships the shared Alembic runner/env/registry that the
+    # permissions chain depends on, plus upsert_by_id for idempotent seeding.
     "pgsqlasync2fast-fastapi>=0.5.2",
-    # Exact pin per the alembic-2fast migration change: deliberate re-pins
-    # require a version bump and a full test run. Never use a range here.
+    # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
 ]
 
