@@ -1,8 +1,10 @@
+from uuid import UUID
+
 from sqlmodel import Field
-from oauth2fast_fastapi.models import AuthModel
+from oauth2fast_fastapi.models import AuthSoftDeleteModel
 
 
-class Role(AuthModel, table=True):
+class Role(AuthSoftDeleteModel, table=True):
     """
     Role definition for RBAC.
     Description: Role model
@@ -12,7 +14,6 @@ class Role(AuthModel, table=True):
 
     name: str = Field(index=True, unique=True)
     description: str | None = Field(default=None)
-    is_active: bool = Field(default=True)
 
     # Nota: la relación Many-to-Many con User se hace a través de RoleUser,
     # pero NO se puede declarar Relationship aquí porque oauth2fast_fastapi.User

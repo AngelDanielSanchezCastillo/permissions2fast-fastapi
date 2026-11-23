@@ -4,7 +4,9 @@ Permission Management Router
 Endpoints for managing permissions, categories, and assignments.
 """
 
+from uuid import UUID
 from fastapi import APIRouter, Depends
+from uuid import UUID
 from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -160,7 +162,7 @@ async def list_permissions(
     responses={404: {"model": PermissionErrorResponse}},
 )
 async def get_permission(
-    permission_id: int,
+    permission_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | PermissionSingleResponse:
     """Get permission by ID."""
@@ -186,7 +188,7 @@ async def get_permission(
     responses={404: {"model": PermissionErrorResponse}},
 )
 async def update_permission(
-    permission_id: int,
+    permission_id: UUID,
     permission_data: PermissionUpdate,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | PermissionSingleResponse:
@@ -215,7 +217,7 @@ async def update_permission(
     responses={404: {"model": DeleteErrorResponse}},
 )
 async def delete_permission(
-    permission_id: int,
+    permission_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | DeleteSuccessResponse:
     """Delete a permission."""
@@ -238,7 +240,7 @@ async def delete_permission(
     responses={400: {"model": PermissionRouteErrorResponse}},
 )
 async def add_permission_route(
-    permission_id: int,
+    permission_id: UUID,
     route_data: PermissionRouteCreate,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | PermissionRouteSuccessResponse:
@@ -297,7 +299,7 @@ async def assign_user_permission(
     response_model=PermissionListResponse,
 )
 async def list_user_permissions(
-    user_id: int,
+    user_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> PermissionListResponse:
     """List all permissions assigned directly to a user."""
@@ -321,8 +323,8 @@ async def list_user_permissions(
     responses={404: {"model": DeleteErrorResponse}},
 )
 async def remove_user_permission(
-    user_id: int,
-    permission_id: int,
+    user_id: UUID,
+    permission_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | DeleteSuccessResponse:
     """Remove a direct permission from a user."""

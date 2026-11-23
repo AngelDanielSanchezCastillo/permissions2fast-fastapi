@@ -103,12 +103,11 @@ def test_baseline_0001_initial_parseable_and_owns_exactly_seven_tables():
     cfg.set_main_option("script_location", SCRIPT_LOCATION)
     script = ScriptDirectory.from_config(cfg)
 
-    head = script.get_current_head()
-    assert head == "0001"
-    rev = script.get_revision(head)
-    assert rev.down_revision is None  # single-baseline chain
+    # The 0001 baseline should still be parseable
+    baseline = script.get_revision("0001")
+    assert baseline.down_revision is None  # single-baseline chain
 
-    filepath = rev.path
+    filepath = baseline.path
     assert filepath.endswith("0001_initial.py"), filepath
 
     with open(filepath) as fh:
@@ -123,6 +122,33 @@ def test_baseline_0001_initial_parseable_and_owns_exactly_seven_tables():
     # Cross-chain FK (FK-proven order): role_users references users.id even
     # though users belongs to the oauth chain.
     assert "['users.id']" in text
+
+
+def test_uuid_soft_delete_revision_chains_from_baseline():
+    """The UUID+soft-delete migration chains from the 0001 baseline."""
+    cfg = Config()
+    cfg.set_main_option("script_location", SCRIPT_LOCATION)
+    script = ScriptDirectory.from_config(cfg)
+
+    head = script.get_current_head()
+    assert head == "b2c3d4e5f6g7"
+
+    rev = script.get_revision(head)
+    assert rev is not None
+    assert rev.down_revision == "0001"
+
+    with open(rev.path) as fh:
+        text = fh.read()
+    # Must migrate all 7 tables
+    for table in sorted(OWNED):
+        assert f"'{table}'" in text
+    # Must add soft-delete columns
+    assert "deleted_at" in text
+    assert "deleted_by" in text
+    # Must use UUID type
+    assert "Uuid" in text
+    # Must remove is_active from roles and routes
+    assert "is_active" in text  # referenced in drop_column
 
 
 def test_chain_upgrades_to_head_in_offline_mode():
