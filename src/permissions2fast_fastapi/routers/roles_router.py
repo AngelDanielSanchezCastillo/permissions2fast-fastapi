@@ -4,7 +4,9 @@ Role Management Router
 Endpoints for managing roles, role permissions, and user-role assignments.
 """
 
+from uuid import UUID
 from fastapi import APIRouter, Depends
+from uuid import UUID
 from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -66,7 +68,6 @@ async def create_role(
                 id=role.id,
                 name=role.name,
                 description=role.description,
-                is_active=role.is_active,
                 created_at=role.created_at,
                 updated_at=role.updated_at,
             )
@@ -96,7 +97,6 @@ async def list_roles(
                 id=r.id,
                 name=r.name,
                 description=r.description,
-                is_active=r.is_active,
                 created_at=r.created_at,
                 updated_at=r.updated_at,
             )
@@ -112,7 +112,7 @@ async def list_roles(
     responses={404: {"model": RoleErrorResponse}},
 )
 async def get_role(
-    role_id: int,
+    role_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | RoleSingleResponse:
     """Get role by ID."""
@@ -141,7 +141,7 @@ async def get_role(
     responses={404: {"model": RoleErrorResponse}},
 )
 async def update_role(
-    role_id: int,
+    role_id: UUID,
     role_data: RoleUpdate,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | RoleSingleResponse:
@@ -171,7 +171,7 @@ async def update_role(
     responses={404: {"model": DeleteErrorResponse}},
 )
 async def delete_role(
-    role_id: int,
+    role_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | DeleteSuccessResponse:
     """Delete a role."""
@@ -194,7 +194,7 @@ async def delete_role(
     responses={400: {"model": RolePermissionErrorResponse}},
 )
 async def add_role_permission(
-    role_id: int,
+    role_id: UUID,
     perm_data: RolePermissionCreate,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | RolePermissionSuccessResponse:
@@ -215,7 +215,7 @@ async def add_role_permission(
     response_model=PermissionListResponse,
 )
 async def list_role_permissions(
-    role_id: int,
+    role_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> PermissionListResponse:
     """List all permissions for a role."""
@@ -239,8 +239,8 @@ async def list_role_permissions(
     responses={404: {"model": DeleteErrorResponse}},
 )
 async def delete_role_permission(
-    role_id: int,
-    permission_id: int,
+    role_id: UUID,
+    permission_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | DeleteSuccessResponse:
     """Delete a role permission."""
@@ -290,7 +290,7 @@ async def assign_user_role(
     response_model=RoleListResponse,
 )
 async def list_user_roles(
-    user_id: int,
+    user_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> RoleListResponse:
     """List all roles assigned to a user."""
@@ -301,7 +301,6 @@ async def list_user_roles(
                 id=r.id,
                 name=r.name,
                 description=r.description,
-                is_active=r.is_active,
                 created_at=r.created_at,
                 updated_at=r.updated_at,
             )
@@ -317,8 +316,8 @@ async def list_user_roles(
     responses={404: {"model": DeleteErrorResponse}},
 )
 async def remove_user_role(
-    user_id: int,
-    role_id: int,
+    user_id: UUID,
+    role_id: UUID,
     session: AsyncSession = Depends(get_auth_session),
 ) -> JSONResponse | DeleteSuccessResponse:
     """Remove a role from a user."""

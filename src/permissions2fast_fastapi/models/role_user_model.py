@@ -1,8 +1,10 @@
+from uuid import UUID
+
 from sqlmodel import Field, UniqueConstraint
-from oauth2fast_fastapi.models import AuthModel
+from oauth2fast_fastapi.models import AuthSoftDeleteModel
 
 
-class RoleUser(AuthModel, table=True):
+class RoleUser(AuthSoftDeleteModel, table=True):
     """
     User Role mapping for RBAC.
     Description: Link table that maps users to their assigned roles.
@@ -13,5 +15,5 @@ class RoleUser(AuthModel, table=True):
         UniqueConstraint("user_id", "role_id", name="uq_user_role"),
     )
 
-    user_id: int = Field(index=True, foreign_key="users.id")
-    role_id: int = Field(index=True, foreign_key="roles.id")
+    user_id: UUID = Field(index=True, foreign_key="users.id")
+    role_id: UUID = Field(index=True, foreign_key="roles.id")

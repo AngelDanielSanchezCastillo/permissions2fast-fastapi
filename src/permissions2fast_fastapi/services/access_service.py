@@ -4,6 +4,8 @@ Access Service
 Handles high-level access control logic and permission checking.
 """
 
+from uuid import UUID
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, union
 
@@ -16,7 +18,7 @@ from ..utils.redis_client import get_cached_permissions, set_cached_permissions,
 
 
 async def check_user_access(
-    user_id: int, route_path: str, method: str, session: AsyncSession
+    user_id: UUID, route_path: str, method: str, session: AsyncSession
 ) -> bool:
     """
     Check if a user has access to a specific route.
@@ -40,21 +42,23 @@ async def check_user_access(
     if not route:
         return False
 
-    if not route.is_active:
+    # Route is active when deleted_at is None (SoftDeleteMixin)
+    if route.deleted_at is not None:
         return True
 
-    # 2. Redis Cache Check
+    # 2. Redis Cache check
     if route.name:
         cached_routes = await get_cached_permissions(user_id)
         if cached_routes is not None:
             return route.name in cached_routes
 
-    # 3. Database Check (Cache Miss)
+    # 3. Database check (cache miss)
     direct_perms = (
         select(PermissionAssignment.permission_id)
         .where(
             PermissionAssignment.entity_type == "User",
             PermissionAssignment.entity_id == user_id,
+            PermissionAssignment.deleted_at.is_(None),
         )
     )
     role_perms = (
@@ -64,7 +68,10 @@ async def check_user_access(
             (RoleUser.role_id == PermissionAssignment.entity_id)
             & (PermissionAssignment.entity_type == "Role"),
         )
-        .where(RoleUser.user_id == user_id)
+        .where(
+            RoleUser.user_id == user_id,
+            RoleUser.deleted_at.is_(None),
+        )
     )
     user_perm_ids_query = union(direct_perms, role_perms).subquery()
 
@@ -72,7 +79,11 @@ async def check_user_access(
     stmt = (
         select(Route.name)
         .join(PermissionRoute, PermissionRoute.route_id == Route.id)
-        .where(PermissionRoute.permission_id.in_(select(user_perm_ids_query)))
+        .where(
+            PermissionRoute.permission_id.in_(select(user_perm_ids_query)),
+            PermissionRoute.deleted_at.is_(None),
+            Route.deleted_at.is_(None),
+        )
     )
     result = await session.exec(stmt)
     allowed_route_names = list(result.all())

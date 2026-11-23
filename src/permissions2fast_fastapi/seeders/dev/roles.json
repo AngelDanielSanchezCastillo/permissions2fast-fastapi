@@ -1,21 +1,21 @@
 [
   {
-    "id": 1,
+    "id": "edc8dff4-4309-5de9-bdf8-63e2289a2a50",
     "name": "admin",
     "description": "Administrator with full access to permissions management"
   },
   {
-    "id": 2,
+    "id": "ce512d4c-871b-5a90-9fb8-8aea1a0d208d",
     "name": "manager",
     "description": "Manager with elevated privileges but limited system config"
   },
   {
-    "id": 3,
+    "id": "ff372def-ab91-5df6-834a-69a18c273b01",
     "name": "user",
     "description": "Standard user with basic access"
   },
   {
-    "id": 4,
+    "id": "86e3ca5e-01b7-545a-b712-00a1ff6fcfe1",
     "name": "guest",
     "description": "Guest user with read-only access"
   }

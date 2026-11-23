@@ -18,6 +18,7 @@ GLOBAL rules:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from uuid import UUID
 
 from pgsqlasync2fast_fastapi.seeder import insert_if_missing
 
@@ -32,7 +33,8 @@ from permissions2fast_fastapi.models.route_model import Route
 # The default permission category id used when a route declares a permission
 # but the app did not pre-create it. Safe because permissions are unique by
 # name; the category row is a lightweight grouping bucket.
-_DEFAULT_PERMISSION_CATEGORY_ID = 1
+# UUID for "System Administration" category (deterministic from seeders/dev/categories.json)
+_DEFAULT_PERMISSION_CATEGORY_ID = UUID("b6058c92-ca25-5b5a-8100-9e522fe4cf1f")
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,18 +97,28 @@ async def _seed_global_route(session, spec: RouteSpec) -> int:
     """
     route_name = f"{spec.method} {spec.path}"
     route = await insert_if_missing(
-        session, Route, lookup={"name": route_name}, defaults={"is_active": True}
+        session, Route, lookup={"name": route_name}, defaults={}
     )
 
     grants = 0
     if spec.permission:
+        # Ensure the default category exists
+        from permissions2fast_fastapi.models.permission_category_model import (
+            PermissionCategory,
+        )
+        category = await insert_if_missing(
+            session,
+            PermissionCategory,
+            lookup={"name": "System Administration"},
+            defaults={"id": _DEFAULT_PERMISSION_CATEGORY_ID},
+        )
+
         permission = await insert_if_missing(
             session,
             Permission,
             lookup={"name": spec.permission},
             defaults={
-                "permission_category_id": _DEFAULT_PERMISSION_CATEGORY_ID,
-                "is_active": True,
+                "permission_category_id": category.id,
             },
         )
         await insert_if_missing(
@@ -120,7 +132,7 @@ async def _seed_global_route(session, spec: RouteSpec) -> int:
             session,
             Role,
             lookup={"name": role_name},
-            defaults={"is_active": True},
+            defaults={},
         )
         if spec.permission:
             await insert_if_missing(

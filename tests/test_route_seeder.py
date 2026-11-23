@@ -71,17 +71,10 @@ async def test_seed_global_routes_inserts_route_permission_role():
     """Global scope inserts route + permission + role into auth DB idempotently."""
     from sqlalchemy import text
 
-    from permissions2fast_fastapi.models.permission_category_model import (
-        PermissionCategory,
-    )
     from permissions2fast_fastapi.services.route_seeder import seed_global_routes
 
     engine = await _auth_engine()
     async with AsyncSession(engine) as session:
-        # A category is required by the permission FK.
-        session.add(PermissionCategory(name="config"))
-        await session.flush()
-
         manifest = [
             _spec(
                 "GET",
@@ -181,16 +174,10 @@ async def test_seed_global_routes_creates_role_grants():
     """Route with permission and roles creates one PermissionAssignment per role."""
     from sqlalchemy import text
 
-    from permissions2fast_fastapi.models.permission_category_model import (
-        PermissionCategory,
-    )
     from permissions2fast_fastapi.services.route_seeder import seed_global_routes
 
     engine = await _auth_engine()
     async with AsyncSession(engine) as session:
-        session.add(PermissionCategory(name="config"))
-        await session.flush()
-
         manifest = [
             _spec(
                 "POST",
@@ -231,16 +218,10 @@ async def test_seed_global_routes_grant_idempotent():
     """Double-seed leaves exactly 1 grant row per role (UQ-protected)."""
     from sqlalchemy import text
 
-    from permissions2fast_fastapi.models.permission_category_model import (
-        PermissionCategory,
-    )
     from permissions2fast_fastapi.services.route_seeder import seed_global_routes
 
     engine = await _auth_engine()
     async with AsyncSession(engine) as session:
-        session.add(PermissionCategory(name="config"))
-        await session.flush()
-
         manifest = [
             _spec(
                 "POST",
@@ -295,16 +276,10 @@ async def test_seed_global_routes_prod_excludes_dev_only_grants():
     """prod must not create grants for dev-only routes (profile-aware)."""
     from sqlalchemy import text
 
-    from permissions2fast_fastapi.models.permission_category_model import (
-        PermissionCategory,
-    )
     from permissions2fast_fastapi.services.route_seeder import seed_global_routes
 
     engine = await _auth_engine()
     async with AsyncSession(engine) as session:
-        session.add(PermissionCategory(name="config"))
-        await session.flush()
-
         manifest = [
             _spec(
                 "DELETE",

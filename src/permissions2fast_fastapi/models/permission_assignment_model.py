@@ -1,8 +1,10 @@
+from uuid import UUID
+
 from sqlmodel import Field, UniqueConstraint
-from oauth2fast_fastapi.models import AuthModel
+from oauth2fast_fastapi.models import AuthSoftDeleteModel
 
 
-class PermissionAssignment(AuthModel, table=True):
+class PermissionAssignment(AuthSoftDeleteModel, table=True):
     """
     Polymorphic Permission Assignment for RBAC.
     Description: Assigns a permission directly to an entity (e.g. User or Role).
@@ -16,6 +18,6 @@ class PermissionAssignment(AuthModel, table=True):
         ),
     )
 
-    permission_id: int = Field(index=True, foreign_key="permissions.id")
+    permission_id: UUID = Field(index=True, foreign_key="permissions.id")
     entity_type: str = Field(index=True)  # e.g., "User", "Role"
-    entity_id: int = Field(index=True)
+    entity_id: UUID = Field(index=True)

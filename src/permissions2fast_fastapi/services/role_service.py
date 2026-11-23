@@ -5,6 +5,8 @@ Business logic for role management including CRUD operations,
 permission assignment, and user-role management.
 """
 
+from uuid import UUID
+
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, delete
@@ -33,7 +35,7 @@ async def create_role(role_data: RoleCreate, session: AsyncSession) -> Role:
         raise ValueError(f"Role '{role_data.name}' already exists")
 
 
-async def get_role(role_id: int, session: AsyncSession) -> Role | None:
+async def get_role(role_id: UUID, session: AsyncSession) -> Role | None:
     """Get role by ID."""
     result = await session.exec(select(Role).where(Role.id == role_id))
     return result.one_or_none()
@@ -50,7 +52,7 @@ async def list_roles(
 
 
 async def update_role(
-    role_id: int, role_data: RoleUpdate, session: AsyncSession
+    role_id: UUID, role_data: RoleUpdate, session: AsyncSession
 ) -> Role | None:
     """Update a role."""
     role = await get_role(role_id, session)
@@ -67,7 +69,7 @@ async def update_role(
     return role
 
 
-async def delete_role(role_id: int, session: AsyncSession) -> bool:
+async def delete_role(role_id: UUID, session: AsyncSession) -> bool:
     """Delete a role."""
     role = await get_role(role_id, session)
     if not role:
@@ -82,7 +84,7 @@ async def delete_role(role_id: int, session: AsyncSession) -> bool:
 
 
 async def add_role_permission(
-    role_id: int, permission_id: int, session: AsyncSession
+    role_id: UUID, permission_id: UUID, session: AsyncSession
 ) -> PermissionAssignment:
     """Add a permission to a role."""
     existing = await session.exec(
@@ -111,7 +113,7 @@ async def add_role_permission(
 
 
 async def list_role_permissions(
-    role_id: int, session: AsyncSession
+    role_id: UUID, session: AsyncSession
 ) -> list[Permission]:
     """List all permissions for a role."""
     stmt = (
@@ -127,7 +129,7 @@ async def list_role_permissions(
 
 
 async def delete_role_permission(
-    role_id: int, permission_id: int, session: AsyncSession
+    role_id: UUID, permission_id: UUID, session: AsyncSession
 ) -> bool:
     """Delete a role permission."""
     stmt = select(PermissionAssignment).where(
@@ -150,13 +152,13 @@ async def delete_role_permission(
 
 
 async def assign_user_role(
-    user_id: int, role_id: int, session: AsyncSession
+    user_id: UUID, role_id: UUID, session: AsyncSession
 ) -> RoleUser:
     """Assign a role to a user."""
     existing = await session.exec(
-select(RoleUser).where(
-RoleUser.role_id == role_id,
-RoleUser.user_id == user_id,
+        select(RoleUser).where(
+            RoleUser.role_id == role_id,
+            RoleUser.user_id == user_id,
         )
     )
     if existing.one_or_none():
@@ -178,7 +180,7 @@ RoleUser.user_id == user_id,
         raise ValueError("Error assigning role to user")
 
 
-async def list_user_roles(user_id: int, session: AsyncSession) -> list[Role]:
+async def list_user_roles(user_id: UUID, session: AsyncSession) -> list[Role]:
     """List all roles assigned to a user."""
     stmt = (
         select(Role)
@@ -189,7 +191,7 @@ async def list_user_roles(user_id: int, session: AsyncSession) -> list[Role]:
     return list(result.all())
 
 
-async def remove_user_role(user_id: int, role_id: int, session: AsyncSession) -> bool:
+async def remove_user_role(user_id: UUID, role_id: UUID, session: AsyncSession) -> bool:
     """Remove a role from a user."""
     stmt = select(RoleUser).where(
         RoleUser.role_id == role_id,

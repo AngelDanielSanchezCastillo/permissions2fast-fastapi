@@ -1,6 +1,8 @@
+from uuid import UUID
+
 from sqlmodel import Field, Relationship
 from typing import TYPE_CHECKING, List
-from oauth2fast_fastapi.models import AuthModel
+from oauth2fast_fastapi.models import AuthSoftDeleteModel
 from .permission_route_model import PermissionRoute
 
 if TYPE_CHECKING:
@@ -8,7 +10,7 @@ if TYPE_CHECKING:
     from .route_model import Route
 
 
-class Permission(AuthModel, table=True):
+class Permission(AuthSoftDeleteModel, table=True):
     """
     Permission definition for RBAC.
     Description: Represents a specific action or access right.
@@ -17,7 +19,7 @@ class Permission(AuthModel, table=True):
     __tablename__ = "permissions"
 
     name: str = Field(index=True, unique=True)
-    permission_category_id: int = Field(foreign_key="permission_categories.id")
+    permission_category_id: UUID = Field(foreign_key="permission_categories.id")
 
     # Many-to-One: un permiso pertenece a una categoría
     category: "PermissionCategory" = Relationship(back_populates="permissions")

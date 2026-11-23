@@ -6,6 +6,8 @@ These schemas provide unified API response format with success/error patterns.
 
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
+
 from pydantic import BaseModel
 
 from tools2fast_fastapi import ErrorDetail
@@ -15,9 +17,13 @@ from tools2fast_fastapi import ErrorDetail
 
 class PermissionResponse(BaseModel):
     """Response for permission data."""
-    id: int
+    id: UUID
     name: str
-    permission_category_id: int
+    permission_category_id: UUID
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
 
 class PermissionCreatedResponse(BaseModel):
@@ -62,8 +68,12 @@ class PermissionUnexpectedErrorResponse(BaseModel):
 
 class PermissionCategoryResponse(BaseModel):
     """Response for permission category data."""
-    id: int
+    id: UUID
     name: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
 
 class PermissionCategoryCreatedResponse(BaseModel):
@@ -93,9 +103,9 @@ class PermissionCategoryErrorResponse(BaseModel):
 
 class UserPermissionResponse(BaseModel):
     """Response for user permission assignment data."""
-    permission_id: int
+    permission_id: UUID
     entity_type: str
-    entity_id: int
+    entity_id: UUID
 
 
 class UserPermissionCreatedResponse(BaseModel):
@@ -133,12 +143,13 @@ class PermissionRouteErrorResponse(BaseModel):
 
 class RoleResponse(BaseModel):
     """Response for role data."""
-    id: int
+    id: UUID
     name: str
     description: str | None = None
-    is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
 
 class RoleCreatedResponse(BaseModel):
@@ -183,8 +194,8 @@ class RoleUnexpectedErrorResponse(BaseModel):
 
 class RoleUserResponse(BaseModel):
     """Response for user role assignment data."""
-    user_id: int
-    role_id: int
+    user_id: UUID
+    role_id: UUID
 
 
 class RoleUserCreatedResponse(BaseModel):
@@ -222,9 +233,12 @@ class RolePermissionErrorResponse(BaseModel):
 
 class RouteResponse(BaseModel):
     """Response for route data."""
-    id: int
+    id: UUID
     name: str
-    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
 
 class RouteCreatedResponse(BaseModel):

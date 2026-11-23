@@ -4,7 +4,9 @@ Route Management Router
 Endpoints for managing routes.
 """
 
+from uuid import UUID
 from fastapi import APIRouter, Depends
+from uuid import UUID
 from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -48,8 +50,7 @@ async def create_route(
             route=RouteResponse(
                 id=route.id,
                 name=route.name,
-                is_active=route.is_active,
-            )
+                )
         )
     except ValueError as e:
         error_resp, http_status = APIResponse.fail(
@@ -75,8 +76,7 @@ async def list_routes(
             RouteResponse(
                 id=r.id,
                 name=r.name,
-                is_active=r.is_active,
-            )
+                )
             for r in routes
         ],
         count=len(routes),

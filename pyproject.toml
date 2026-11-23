@@ -7,7 +7,7 @@ name = "permissions2fast-fastapi"
 dynamic = ["version"]
 description = "Role-based access control (RBAC) and permission management extension for oauth2fast-fastapi"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = {file = "LICENSE"}
 authors = [
     {name = "Angel Daniel Sanchez Castillo", email = "angeldaniel.sanchezcastillo@gmail.com"}
@@ -18,25 +18,21 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Framework :: FastAPI",
     "Topic :: Security",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 dependencies = [
-    # 0.7.0+ ships the standardized auth error contract (AuthError), the
-    # oauth chain that must run first in the auth lane, and the router
-    # split (public_router + admin_router).
-    "oauth2fast-fastapi>=0.7.0",
+    # 0.8.0+ ships UUID v7 primary keys and soft-delete support.
+    "oauth2fast-fastapi>=0.8.0",
     # Direct imports of AuthError, APIResponse and ErrorDetail.
-    "tools2fast-fastapi>=0.3.14",
+    "tools2fast-fastapi>=0.4.0",
     "rbac2fast-core>=0.1.1",
-    # 0.5.2+ ships the shared Alembic runner/env/registry that the
-    # permissions chain depends on, plus upsert_by_id for idempotent seeding.
-    "pgsqlasync2fast-fastapi>=0.5.2",
+    # 0.6.0+ ships migration helpers for bigint→UUID conversion.
+    "pgsqlasync2fast-fastapi>=0.6.0",
     # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
 ]
@@ -96,7 +92,7 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

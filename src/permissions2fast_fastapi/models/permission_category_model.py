@@ -1,12 +1,14 @@
+from uuid import UUID
+
 from sqlmodel import Field, Relationship
 from typing import TYPE_CHECKING, List
-from oauth2fast_fastapi.models import AuthModel
+from oauth2fast_fastapi.models import AuthSoftDeleteModel
 
 if TYPE_CHECKING:
     from .permission_model import Permission
 
 
-class PermissionCategory(AuthModel, table=True):
+class PermissionCategory(AuthSoftDeleteModel, table=True):
     """
     Permission Category definition for RBAC.
     Description: Groups related permissions together.

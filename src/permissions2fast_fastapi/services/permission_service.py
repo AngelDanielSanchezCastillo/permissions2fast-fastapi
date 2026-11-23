@@ -4,6 +4,8 @@ Permission Service
 Business logic for managing permissions, categories, and user-specific assignments.
 """
 
+from uuid import UUID
+
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
@@ -60,7 +62,7 @@ async def create_permission(
 
 
 async def get_permission(
-    permission_id: int, session: AsyncSession
+    permission_id: UUID, session: AsyncSession
 ) -> Permission | None:
     """Get permission by ID."""
     result = await session.exec(
@@ -80,7 +82,7 @@ async def list_permissions(
 
 
 async def update_permission(
-    permission_id: int, permission_data: PermissionUpdate, session: AsyncSession
+    permission_id: UUID, permission_data: PermissionUpdate, session: AsyncSession
 ) -> Permission | None:
     """Update a permission."""
     permission = await get_permission(permission_id, session)
@@ -97,7 +99,7 @@ async def update_permission(
     return permission
 
 
-async def delete_permission(permission_id: int, session: AsyncSession) -> bool:
+async def delete_permission(permission_id: UUID, session: AsyncSession) -> bool:
     """Delete a permission."""
     permission = await get_permission(permission_id, session)
     if not permission:
@@ -110,7 +112,7 @@ async def delete_permission(permission_id: int, session: AsyncSession) -> bool:
 # Permission Routes
 
 async def add_permission_route(
-    permission_id: int, route_id: int, session: AsyncSession
+    permission_id: UUID, route_id: UUID, session: AsyncSession
 ) -> PermissionRoute:
     """Link a permission to a route."""
     existing = await session.exec(
@@ -135,7 +137,7 @@ async def add_permission_route(
 # User Permissions
 
 async def assign_user_permission(
-    user_id: int, permission_id: int, session: AsyncSession
+    user_id: UUID, permission_id: UUID, session: AsyncSession
 ) -> PermissionAssignment:
     """Assign a permission directly to a user."""
     existing = await session.exec(
@@ -166,7 +168,7 @@ async def assign_user_permission(
 
 
 async def list_user_permissions(
-    user_id: int, session: AsyncSession
+    user_id: UUID, session: AsyncSession
 ) -> list[Permission]:
     """List all direct permissions for a specific user."""
     stmt = (
@@ -181,7 +183,7 @@ async def list_user_permissions(
     return list(result.all())
 
 async def remove_user_permission(
-    user_id: int, permission_id: int, session: AsyncSession
+    user_id: UUID, permission_id: UUID, session: AsyncSession
 ) -> bool:
     """Remove a direct permission from a user."""
     stmt = select(PermissionAssignment).where(
