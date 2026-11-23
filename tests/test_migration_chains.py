@@ -139,14 +139,13 @@ def test_uuid_soft_delete_revision_chains_from_baseline():
 
     with open(rev.path) as fh:
         text = fh.read()
-    # Must migrate all 7 tables
+    # Must migrate all 7 tables (two-phase Alembic helpers)
     for table in sorted(OWNED):
-        assert f"'{table}'" in text
-    # Must add soft-delete columns
-    assert "deleted_at" in text
-    assert "deleted_by" in text
-    # Must use UUID type
-    assert "Uuid" in text
+        assert table in text
+    assert "add_soft_delete_columns_alembic" in text
+    assert "prepare_pk_uuid_alembic" in text
+    assert "prepare_fk_uuid_alembic" in text
+    assert "finalize_uuid_alembic" in text
     # Must remove is_active from roles and routes
     assert "is_active" in text  # referenced in drop_column
 
