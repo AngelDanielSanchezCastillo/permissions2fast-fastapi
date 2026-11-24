@@ -176,3 +176,11 @@ This package follows consistent naming conventions for models and database table
 - **Plural** snake_case on both table names
 - **Alphabetical order** of the two table names
 - Examples: `role_users` (r < u), `permission_roles` (p < r)
+
+## UUID migration coordination (0.12.2+)
+
+`role_users.user_id` and `permission_assignments.entity_id` (`entity_type="User"`)
+are backfilled from the `_uuid_migration_user_map` table left by
+`oauth2fast-fastapi >= 0.8.2`. If the map is absent (auth-only databases
+migrated with 0.8.1), the previous no-backfill behavior is kept. Upgrade the
+AUTH lane in order: oauth -> permissions -> tenant2fast-auth.
