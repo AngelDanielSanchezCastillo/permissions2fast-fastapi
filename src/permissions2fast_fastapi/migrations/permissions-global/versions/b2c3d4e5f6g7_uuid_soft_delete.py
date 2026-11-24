@@ -91,7 +91,13 @@ def upgrade() -> None:
     # --- Soft-delete columns + drop is_active -----------------------------
     for table in _ALL_TABLES:
         add_soft_delete_columns_alembic(op, table)
+    # Preserve the old deactivation semantics before dropping is_active:
+    # a deactivated role/route becomes soft-deleted.
     for table in _IS_ACTIVE_TABLES:
+        op.execute(
+            f"UPDATE {table} SET deleted_at = now() "
+            "WHERE is_active = false AND deleted_at IS NULL"
+        )
         op.drop_column(table, 'is_active')
 
     # --- Phase 1: prepare PKs and internal FKs (old int columns kept) -----
