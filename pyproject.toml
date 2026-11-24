@@ -27,10 +27,10 @@ classifiers = [
 
 dependencies = [
     # 0.8.0+ ships UUID v7 primary keys and soft-delete support.
-    "oauth2fast-fastapi>=0.8.0",
+    "oauth2fast-fastapi>=0.8.2",
     # Direct imports of AuthError, APIResponse and ErrorDetail.
     "tools2fast-fastapi>=0.4.0",
-    "rbac2fast-core>=0.1.1",
+    "rbac2fast-core>=0.1.2",
     # 0.6.0+ ships migration helpers for bigint→UUID conversion.
     "pgsqlasync2fast-fastapi>=0.6.2",
     # Alembic ships the shared migration runner/env/registry.

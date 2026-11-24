@@ -1,4 +1,5 @@
 import pytest
+from datetime import UTC, datetime
 from httpx import AsyncClient
 
 from permissions2fast_fastapi.models.role_model import Role
@@ -45,7 +46,8 @@ async def setup_permissions(session, user_with_permission, admin_role):
     session.add(route_admin)
     route_user = Route(name="/api/user", validate=True)
     session.add(route_user)
-    route_public = Route(name="/api/public", is_active=False)
+    # Soft-deleted route == validation disabled (public route).
+    route_public = Route(name="/api/public", deleted_at=datetime.now(UTC))
     session.add(route_public)
     
     await session.commit()
@@ -146,7 +148,7 @@ async def test_api_permissions_flow(client: AsyncClient, session, user_with_perm
         assert resp.status_code == 200
 
         # 5. Assign Permission to User
-        resp = await client.post("/permissions/assign", json={"user_id": user_with_permission.id, "permission_id": perm_id})
+        resp = await client.post("/permissions/assign", json={"user_id": str(user_with_permission.id), "permission_id": perm_id})
         assert resp.status_code == 200
 
     # 6. Verify Access Service check

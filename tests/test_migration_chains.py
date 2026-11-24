@@ -148,6 +148,11 @@ def test_uuid_soft_delete_revision_chains_from_baseline():
     assert "finalize_uuid_alembic" in text
     # Must remove is_active from roles and routes
     assert "is_active" in text  # referenced in drop_column
+    # Cross-chain coordination (ODD-3 Fase 1.5): consume the user map.
+    assert "_uuid_migration_user_map" in text
+    assert '_backfill_from_user_map("role_users")' in text
+    assert "permission_assignments" in text
+    assert "uq_user_role" in text
 
 
 def test_chain_upgrades_to_head_in_offline_mode():

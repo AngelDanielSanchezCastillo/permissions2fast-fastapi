@@ -63,12 +63,41 @@ _INTERNAL_FKS = (
 )
 
 
+def _backfill_from_user_map(table: str) -> None:
+    """Backfill ``user_id_uuid`` from the cross-chain map when it exists.
+
+    Wrapped in a DO block so Alembic can render the migration offline (no
+    ``get_bind()``), while online it is a no-op when oauth2fast < 0.8.2 did not
+    leave the map.
+    """
+    op.execute(
+        f"""
+        DO $$
+        BEGIN
+            IF to_regclass('_uuid_migration_user_map') IS NOT NULL THEN
+                UPDATE {table} AS target
+                SET user_id_uuid = m.new_uuid
+                FROM _uuid_migration_user_map AS m
+                WHERE m.old_id = target.user_id
+                  AND target.user_id_uuid IS NULL;
+            END IF;
+        END $$;
+        """
+    )
+
+
 def upgrade() -> None:
     """Upgrade schema: bigint → UUID + soft-delete (two-phase, FK-safe)."""
     # --- Soft-delete columns + drop is_active -----------------------------
     for table in _ALL_TABLES:
         add_soft_delete_columns_alembic(op, table)
+    # Preserve the old deactivation semantics before dropping is_active:
+    # a deactivated role/route becomes soft-deleted.
     for table in _IS_ACTIVE_TABLES:
+        op.execute(
+            f"UPDATE {table} SET deleted_at = now() "
+            "WHERE is_active = false AND deleted_at IS NULL"
+        )
         op.drop_column(table, 'is_active')
 
     # --- Phase 1: prepare PKs and internal FKs (old int columns kept) -----
@@ -84,10 +113,13 @@ def upgrade() -> None:
             continue  # already prepared above
         prepare_fk_uuid_alembic(op, child, fk_column, parent, nullable=False)
 
-    # role_users.user_id → auth users.id (external, already UUID): no backfill.
+    # role_users.user_id → auth users.id (external): oauth2fast >= 0.8.2 drops
+    # the FK and leaves a map so the old integer ids map to the same UUIDs.
     op.add_column('role_users', sa.Column('user_id_uuid', sa.Uuid(), nullable=True))
+    _backfill_from_user_map("role_users")
 
-    # permission_assignments.entity_id (polymorphic): backfill only Roles.
+    # permission_assignments.entity_id (polymorphic): backfill Roles locally
+    # and Users from the cross-chain map.
     op.add_column(
         'permission_assignments',
         sa.Column('entity_id_uuid', sa.Uuid(), nullable=True),
@@ -101,18 +133,56 @@ def upgrade() -> None:
           AND pa.entity_id_uuid IS NULL
         """
     )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF to_regclass('_uuid_migration_user_map') IS NOT NULL THEN
+                UPDATE permission_assignments AS pa
+                SET entity_id_uuid = m.new_uuid
+                FROM _uuid_migration_user_map AS m
+                WHERE pa.entity_type = 'User' AND m.old_id = pa.entity_id
+                  AND pa.entity_id_uuid IS NULL;
+            END IF;
+        END $$;
+        """
+    )
 
     # --- Phase 2: finalize (drop child FKs → swap PKs → swap FKs) ---------
+    # role_users.user_id is NOT passed here: its external FK was dropped by
+    # oauth2fast, so the column is swapped manually below (the helper would
+    # try to drop an already-missing constraint).
     finalize_uuid_alembic(
         op,
         pk_tables=_ALL_TABLES,
-        fk_relations=[
-            *_INTERNAL_FKS,
-            ("role_users", "user_id", "users"),
-        ],
-        unique_constraints=[
-            ("role_users", "uq_user_role", ("user_id", "role_id")),
-        ],
+        fk_relations=list(_INTERNAL_FKS),
+    )
+
+    # --- role_users.user_id: manual swap (external FK already dropped) ----
+    op.drop_column('role_users', 'user_id')
+    op.alter_column('role_users', 'user_id_uuid', new_column_name='user_id')
+    op.create_foreign_key(
+        'role_users_user_id_fkey',
+        'role_users',
+        'users',
+        ['user_id'],
+        ['id'],
+    )
+    op.create_index(
+        op.f('ix_role_users_user_id'), 'role_users', ['user_id'], unique=False
+    )
+    op.create_unique_constraint(
+        'uq_user_role', 'role_users', ['user_id', 'role_id']
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM role_users WHERE user_id IS NULL) THEN
+                ALTER TABLE role_users ALTER COLUMN user_id SET NOT NULL;
+            END IF;
+        END $$;
+        """
     )
 
     # --- entity_id is not an FK: swap it manually after the PK/FK pass ----
