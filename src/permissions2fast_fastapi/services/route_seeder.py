@@ -33,8 +33,10 @@ from permissions2fast_fastapi.models.route_model import Route
 # The default permission category id used when a route declares a permission
 # but the app did not pre-create it. Safe because permissions are unique by
 # name; the category row is a lightweight grouping bucket.
-# UUID for "System Administration" category (deterministic from seeders/dev/categories.json)
-_DEFAULT_PERMISSION_CATEGORY_ID = UUID("b6058c92-ca25-5b5a-8100-9e522fe4cf1f")
+#: UUID for the "System Administration" category, matching the package's
+#: explicit uuid7 seed literal (boot/categories.json). Literals are stable by
+#: policy; update both together if the manifest literal ever changes.
+_DEFAULT_PERMISSION_CATEGORY_ID = UUID("01a21475-6002-729d-b6a4-58eaf6200614")
 
 
 @dataclass(frozen=True, slots=True)
