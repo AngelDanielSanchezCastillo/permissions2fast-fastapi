@@ -32,7 +32,7 @@ dependencies = [
     "tools2fast-fastapi>=0.4.0",
     "rbac2fast-core>=0.2.0",
     # 0.6.0+ ships migration helpers for bigint→UUID conversion.
-    "pgsqlasync2fast-fastapi>=0.6.2",
+    "pgsqlasync2fast-fastapi>=0.7.0",
     # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
 ]
@@ -101,7 +101,3 @@ members = [
     "rbac2fast-core",
 ]
 
-# TEMPORARY (ODD-5 local development): use the local pgsqlasync2fast checkout
-# until 0.7.0 is published. Revert to the pinned PyPI version before release.
-[tool.uv.sources]
-pgsqlasync2fast-fastapi = { path = "../pgsqlasync2fast-fastapi", editable = true }
