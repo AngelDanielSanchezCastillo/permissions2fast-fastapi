@@ -21,38 +21,40 @@ from .models.route_model import Route
 from .services.route_seeder import RouteSpec, seed_global_routes
 
 
-def get_seeder_config():
+def get_seeder_config() -> "PackageSeederConfig":
     """
-    Return the SeederConfig for permissions2fast-fastapi.
+    Return this package's seeder configuration.
 
-    This uses the orchestrator's generic seeding with model_classes and fk_field_mapping.
-    No custom seed() function needed - the orchestrator handles all seeding logic.
+    The package ships its own boot seeders (categories, roles, permissions)
+    and registers them with pgsqlasync2fast so any consuming app gets them
+    automatically when ``RUN_SEEDERS=true``.
     """
     # Path relative to this file: seeders/manifest.json
     import os
+
+    from pgsqlasync2fast_fastapi import PackageSeederConfig
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     manifest_path = os.path.join(current_dir, "seeders", "manifest.json")
 
-    return SeederConfig(
-        connection_name="auth",
-        manifest_path=manifest_path,
-        is_tenant_seeder=False,
-        priority=60,
+    return PackageSeederConfig(
         package_name="permissions2fast-fastapi",
-        seed_fn=None,  # Use orchestrator's generic seeding with model_classes
-        model_classes={
+        manifest_path=manifest_path,
+        model_registry={
             "categories": PermissionCategory,
             "roles": Role,
             "permissions": Permission,
         },
-        fk_field_mapping={
-            "permissions": {"category_id": "permission_category_id"},
-        },
+        connection="auth",
+        priority=60,
     )
 
 
-# Register this package's seeder with the orchestrator
-register_seeder(get_seeder_config())
+# Import seeder components from pgsqlasync2fast-fastapi
+from pgsqlasync2fast_fastapi import PackageSeederConfig, register_package_seeders
+
+# Register this package's seeders at import time.
+register_package_seeders(get_seeder_config())
 
 # Register the permissions-global Alembic chain under the "auth" lane at
 # import time (mirrors the register_seeder idiom; alembic-2fast change).
