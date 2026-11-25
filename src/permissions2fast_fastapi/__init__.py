@@ -18,6 +18,7 @@ from .models.role_user_model import RoleUser
 from .models.route_model import Route
 
 # GLOBAL route+link seeding (RBAC standardization D2)
+from .services.route_manifest import load_route_manifest, validate_route_manifest
 from .services.route_seeder import RouteSpec, seed_global_routes
 
 
@@ -76,6 +77,8 @@ __all__ = [
     # GLOBAL route+link seeding (RBAC standardization D2)
     "RouteSpec",
     "seed_global_routes",
+    "load_route_manifest",
+    "validate_route_manifest",
     # Seeder system
     "get_seeder_config",
     # Seed-data migrations (uuid7 uniformization)

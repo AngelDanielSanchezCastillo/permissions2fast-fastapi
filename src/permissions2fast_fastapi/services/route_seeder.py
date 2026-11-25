@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from pgsqlasync2fast_fastapi.seeder import insert_if_missing
+from pgsqlasync2fast_fastapi.seeders import insert_if_missing
 
 from permissions2fast_fastapi.models.permission_assignment_model import (
     PermissionAssignment,
