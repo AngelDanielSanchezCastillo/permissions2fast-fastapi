@@ -56,6 +56,9 @@ from pgsqlasync2fast_fastapi import PackageSeederConfig, register_package_seeder
 # Register this package's seeders at import time.
 register_package_seeders(get_seeder_config())
 
+# One-off migration helper (uniformize existing DB ids to uuid7 literals).
+from .seeders_migration import adopt_explicit_seed_ids, build_seeder_engine  # noqa: E402
+
 # Register the permissions-global Alembic chain under the "auth" lane at
 # import time (mirrors the register_seeder idiom; alembic-2fast change).
 from . import migrations as _migrations  # noqa: F401
@@ -75,4 +78,7 @@ __all__ = [
     "seed_global_routes",
     # Seeder system
     "get_seeder_config",
+    # Seed-data migrations (uuid7 uniformization)
+    "adopt_explicit_seed_ids",
+    "build_seeder_engine",
 ]

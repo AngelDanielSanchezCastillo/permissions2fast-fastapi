@@ -7,18 +7,18 @@
       "tables": {
         "categories": {
           "file": "boot/categories.json",
-          "mode": "upsert"
+          "mode": "upsert",
+          "natural_key": ["name"]
         },
         "roles": {
           "file": "boot/roles.json",
-          "mode": "upsert"
+          "mode": "upsert",
+          "natural_key": ["name"]
         },
         "permissions": {
           "file": "boot/permissions.json",
           "mode": "upsert",
-          "field_mapping": {
-            "category_id": "permission_category_id"
-          }
+          "natural_key": ["name"]
         }
       },
       "dependencies": {
@@ -31,18 +31,18 @@
       "tables": {
         "categories": {
           "file": "boot/categories.json",
-          "mode": "upsert"
+          "mode": "upsert",
+          "natural_key": ["name"]
         },
         "roles": {
           "file": "boot/roles.json",
-          "mode": "upsert"
+          "mode": "upsert",
+          "natural_key": ["name"]
         },
         "permissions": {
           "file": "boot/permissions.json",
           "mode": "upsert",
-          "field_mapping": {
-            "category_id": "permission_category_id"
-          }
+          "natural_key": ["name"]
         }
       },
       "dependencies": {

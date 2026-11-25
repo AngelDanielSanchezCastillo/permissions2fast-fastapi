@@ -1,57 +1,57 @@
 [
   {
-    "id": "d8dac447-f6fe-543c-bd3f-c6cf0ea710df",
+    "id": "01a21475-6002-729d-b6a4-58f10c92bbe7",
     "name": "manage_routes",
-    "category_id": "b6058c92-ca25-5b5a-8100-9e522fe4cf1f"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eaf6200614"
   },
   {
-    "id": "6eb316e9-a594-5ebf-bfb1-a44b4f9598a0",
+    "id": "01a21475-6002-729d-b6a4-58f2c13f760c",
     "name": "manage_roles",
-    "category_id": "b6058c92-ca25-5b5a-8100-9e522fe4cf1f"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eaf6200614"
   },
   {
-    "id": "2e0a2984-7501-5adb-9ed0-0ffad84fdc35",
+    "id": "01a21475-6002-729d-b6a4-58f3d6bebc38",
     "name": "manage_permissions",
-    "category_id": "b6058c92-ca25-5b5a-8100-9e522fe4cf1f"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eaf6200614"
   },
   {
-    "id": "a565305b-bbf5-5ada-b202-b55625ab8842",
+    "id": "01a21475-6002-729d-b6a4-58f479aecd32",
     "name": "users:read",
-    "category_id": "a2f1fe20-0c97-555e-adcc-a599b063b3d9"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eb2d03aeaf"
   },
   {
-    "id": "c6a1275b-434d-5130-9e48-eb2871d4a094",
+    "id": "01a21475-6002-729d-b6a4-58f5fbe42006",
     "name": "users:create",
-    "category_id": "a2f1fe20-0c97-555e-adcc-a599b063b3d9"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eb2d03aeaf"
   },
   {
-    "id": "6849c0cc-9b93-516f-b181-dbdabdbeccff",
+    "id": "01a21475-6002-729d-b6a4-58f6d3b7fe39",
     "name": "users:update",
-    "category_id": "a2f1fe20-0c97-555e-adcc-a599b063b3d9"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eb2d03aeaf"
   },
   {
-    "id": "a18a2862-c9d9-5667-bbda-7b96713c3788",
+    "id": "01a21475-6002-729d-b6a4-58f779ac8879",
     "name": "users:delete",
-    "category_id": "a2f1fe20-0c97-555e-adcc-a599b063b3d9"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eb2d03aeaf"
   },
   {
-    "id": "1098d619-e2a4-5a5b-aea1-c9865690c165",
+    "id": "01a21475-6002-729d-b6a4-58f80143bb38",
     "name": "roles:read",
-    "category_id": "4453b81a-d17b-5242-9788-a2ba8c5a9142"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58ec968e497e"
   },
   {
-    "id": "9b9fa74a-a7ee-51d7-a6e4-d66c0c9a8005",
+    "id": "01a21475-6002-729d-b6a4-58f9acbb7894",
     "name": "roles:create",
-    "category_id": "4453b81a-d17b-5242-9788-a2ba8c5a9142"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58ec968e497e"
   },
   {
-    "id": "5e07f869-6476-53d6-b8c4-56528b3b4a9a",
+    "id": "01a21475-6002-729d-b6a4-58facf782bc4",
     "name": "roles:update",
-    "category_id": "4453b81a-d17b-5242-9788-a2ba8c5a9142"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58ec968e497e"
   },
   {
-    "id": "f313f42a-6c0a-5652-8f6a-2f0e7bb3c2b7",
+    "id": "01a21475-6002-729d-b6a4-58fbb9e03784",
     "name": "roles:delete",
-    "category_id": "4453b81a-d17b-5242-9788-a2ba8c5a9142"
+    "permission_category_id": "01a21475-6002-729d-b6a4-58ec968e497e"
   }
 ]

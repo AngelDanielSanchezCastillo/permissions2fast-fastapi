@@ -8,6 +8,10 @@ the same check against this package's manifest.
 
 from __future__ import annotations
 
+import json
+import os
+from uuid import UUID
+
 import pytest
 
 from permissions2fast_fastapi import get_seeder_config
@@ -28,6 +32,16 @@ def test_package_seeders_are_valid(profile: str) -> None:
         f"2fast packages must use explicit UUID ids; warnings for '{profile}': "
         f"{report.warnings}"
     )
+
+
+@pytest.mark.parametrize("table", ["categories", "roles", "permissions"])
+def test_seed_literals_are_uuid7(table: str) -> None:
+    """Unification policy: every seed literal is an explicit uuid7."""
+    config = get_seeder_config()
+    seed_dir = os.path.join(os.path.dirname(config.manifest_path), "boot")
+    rows = json.load(open(os.path.join(seed_dir, f"{table}.json")))
+    for row in rows:
+        assert UUID(row["id"]).version == 7, f"{table}: {row['id']} is not uuid7"
 
 
 def test_package_registers_its_seeders() -> None:
