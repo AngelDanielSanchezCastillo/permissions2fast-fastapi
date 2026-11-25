@@ -1,0 +1,57 @@
+[
+  {
+    "id": "01a21475-6002-729d-b6a4-58f10c92bbe7",
+    "name": "manage_routes",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eaf6200614"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58f2c13f760c",
+    "name": "manage_roles",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eaf6200614"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58f3d6bebc38",
+    "name": "manage_permissions",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eaf6200614"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58f479aecd32",
+    "name": "users:read",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eb2d03aeaf"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58f5fbe42006",
+    "name": "users:create",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eb2d03aeaf"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58f6d3b7fe39",
+    "name": "users:update",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eb2d03aeaf"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58f779ac8879",
+    "name": "users:delete",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58eb2d03aeaf"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58f80143bb38",
+    "name": "roles:read",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58ec968e497e"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58f9acbb7894",
+    "name": "roles:create",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58ec968e497e"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58facf782bc4",
+    "name": "roles:update",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58ec968e497e"
+  },
+  {
+    "id": "01a21475-6002-729d-b6a4-58fbb9e03784",
+    "name": "roles:delete",
+    "permission_category_id": "01a21475-6002-729d-b6a4-58ec968e497e"
+  }
+]

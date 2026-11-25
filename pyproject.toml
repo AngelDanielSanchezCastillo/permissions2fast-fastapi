@@ -32,7 +32,7 @@ dependencies = [
     "tools2fast-fastapi>=0.4.0",
     "rbac2fast-core>=0.2.0",
     # 0.6.0+ ships migration helpers for bigint→UUID conversion.
-    "pgsqlasync2fast-fastapi>=0.6.2",
+    "pgsqlasync2fast-fastapi>=0.7.0",
     # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
 ]
@@ -74,8 +74,7 @@ version = {attr = "permissions2fast_fastapi.__version__.__version__"}
 [tool.setuptools.package-data]
 "permissions2fast_fastapi" = [
     "seeders/manifest.json",
-    "seeders/dev/*.json",
-    "seeders/prod/*.json",
+    "seeders/boot/*.json",
     "skills/*.md",
     # Package-owned Alembic chain (alembic-2fast): shipped in the wheel and
     # resolved from the installed release, never a checkout.
@@ -101,3 +100,4 @@ disallow_untyped_defs = false
 members = [
     "rbac2fast-core",
 ]
+
