@@ -153,6 +153,11 @@ def test_uuid_soft_delete_revision_chains_from_baseline():
     assert '_backfill_from_user_map("role_users")' in text
     assert "permission_assignments" in text
     assert "uq_user_role" in text
+    # Duplicate-name drift guard: unique catalogs are deduped and the unique
+    # indexes rebuilt before the PK swap, otherwise the non-HOT UPDATE aborts.
+    assert "_dedupe_unique_catalogs" in text
+    assert "dedupe_unique_columns_alembic" in text
+    assert "ix_routes_name" in text
 
 
 def test_chain_upgrades_to_head_in_offline_mode():
