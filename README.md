@@ -177,6 +177,78 @@ This package follows consistent naming conventions for models and database table
 - **Alphabetical order** of the two table names
 - Examples: `role_users` (r < u), `permission_roles` (p < r)
 
+## Seeders
+
+The package ships a base RBAC dataset and registers it automatically when
+imported. A consuming app only needs `RUN_SEEDERS=true` to get roles,
+categories, permissions and the global route links.
+
+### Data layout
+
+```
+permissions2fast_fastapi/seeders/
+  manifest.json          # v2.0, explicit uuid7 literals, natural_key by name
+  boot/categories.json
+  boot/roles.json
+  boot/permissions.json
+```
+
+The manifest is validated in CI:
+
+```python
+from pgsqlasync2fast_fastapi import validate_seeders_report
+
+report = validate_seeders_report(
+    "permissions2fast_fastapi/seeders/manifest.json",
+    {"categories": Category, "roles": Role, "permissions": Permission},
+    profile="dev",
+)
+assert report.errors == [] and report.warnings == []
+```
+
+### Route manifests (JSON)
+
+Declare guarded GLOBAL routes as JSON and let the package seed routes,
+permissions grants and `permission_routes`:
+
+```json
+[
+  {"method": "GET",  "path": "/roles", "permission": "roles:read",  "roles": ["admin"]},
+  {"method": "POST", "path": "/roles", "permission": "roles:write", "roles": ["admin"]}
+]
+```
+
+```python
+from permissions2fast_fastapi import (
+    load_route_manifest,
+    validate_route_manifest,
+    seed_global_routes,
+)
+
+errors = validate_route_manifest("app/routes/global.json")
+assert errors == []
+
+specs = load_route_manifest("app/routes/global.json")
+await seed_global_routes(session, specs, profile="dev")
+```
+
+Routes are idempotent by `(method, path)`; links are idempotent by
+`(permission, route)`.
+
+### Adopting explicit ids
+
+Existing databases are migrated to the manifest literals on boot:
+
+```python
+from permissions2fast_fastapi import adopt_explicit_seed_ids
+
+await adopt_explicit_seed_ids(session, profile="dev")
+await session.commit()
+```
+
+The permissions-global migration chain rebuilds RBAC FKs with
+`ON UPDATE CASCADE`, so ids are updated in place and children follow.
+
 ## UUID migration coordination (0.12.2+)
 
 `role_users.user_id` and `permission_assignments.entity_id` (`entity_type="User"`)
