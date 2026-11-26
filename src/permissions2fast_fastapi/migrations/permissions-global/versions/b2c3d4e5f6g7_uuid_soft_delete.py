@@ -26,6 +26,7 @@ import sqlalchemy as sa
 
 from pgsqlasync2fast_fastapi.migration_helpers import (
     add_soft_delete_columns_alembic,
+    dedupe_unique_columns_alembic,
     finalize_uuid_alembic,
     prepare_fk_uuid_alembic,
     prepare_pk_uuid_alembic,
@@ -86,8 +87,56 @@ def _backfill_from_user_map(table: str) -> None:
     )
 
 
+def _dedupe_unique_catalogs() -> None:
+    """Collapse drifted duplicates in the unique-name RBAC catalogs.
+
+    Existing databases can carry duplicate catalog keys even though the
+    corresponding unique index reports ``indisvalid = true`` (a logical restore
+    or a data import can leave the index out of sync with the heap). The UUID
+    phase runs a non-HOT ``UPDATE`` per table; PostgreSQL re-validates every
+    unique index for the new tuples and aborts on those duplicates.
+
+    Only catalogs whose dependents are unambiguous are repaired here. ``roles``
+    is intentionally left alone: its assignment surface includes the
+    polymorphic ``permission_assignments.entity_id`` (``entity_type='Role'``),
+    which cannot be repointed by a plain FK rule. A drifted ``roles.name``
+    still aborts loudly instead of deleting assignments silently.
+    """
+    dedupe_unique_columns_alembic(
+        op,
+        "permission_categories",
+        ("name",),
+        index_name="ix_permission_categories_name",
+    )
+    dedupe_unique_columns_alembic(
+        op,
+        "routes",
+        ("name",),
+        index_name="ix_routes_name",
+        dependents=[("permission_routes", "route_id", ("permission_id",))],
+    )
+    dedupe_unique_columns_alembic(
+        op,
+        "permissions",
+        ("name",),
+        index_name="ix_permissions_name",
+        dependents=[
+            ("permission_routes", "permission_id", ("route_id",)),
+            (
+                "permission_assignments",
+                "permission_id",
+                ("entity_type", "entity_id"),
+            ),
+        ],
+    )
+
+
 def upgrade() -> None:
     """Upgrade schema: bigint → UUID + soft-delete (two-phase, FK-safe)."""
+    # Duplicate catalog keys make the PK conversion abort on the unique-index
+    # re-validation; collapse them first.
+    _dedupe_unique_catalogs()
+
     # --- Soft-delete columns + drop is_active -----------------------------
     for table in _ALL_TABLES:
         add_soft_delete_columns_alembic(op, table)
