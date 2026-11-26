@@ -70,7 +70,10 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('role_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['role_id'], ['roles.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    # NOTE: user_id FK to users.id is NOT created here because users belongs to
+    # oauth2fast chain which may have already converted users.id to UUID by the
+    # time this migration runs. The FK is added later in b2c3d4e5f6g7 after
+    # user_id is converted to UUID. This allows both fresh and existing DBs.
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'role_id', name='uq_user_role')
     )
