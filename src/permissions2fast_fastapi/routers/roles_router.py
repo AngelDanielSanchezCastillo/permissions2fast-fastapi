@@ -128,7 +128,6 @@ async def get_role(
             id=role.id,
             name=role.name,
             description=role.description,
-            is_active=role.is_active,
             created_at=role.created_at,
             updated_at=role.updated_at,
         )
@@ -158,7 +157,6 @@ async def update_role(
             id=role.id,
             name=role.name,
             description=role.description,
-            is_active=role.is_active,
             created_at=role.created_at,
             updated_at=role.updated_at,
         )

@@ -25,7 +25,8 @@ async def check_user_access(
 
     Args:
         user_id: The ID of the user.
-        route_path: The request path.
+        route_path: The request path (e.g. ``/roles/``). If a combined
+            ``"METHOD /path"`` string is passed it is used as-is.
         method: The HTTP method.
         session: DB session.
 
@@ -33,9 +34,19 @@ async def check_user_access(
         bool: True if allowed.
     """
 
+    # Route.name is stored as "METHOD /path" (see route_seeder). Build the same
+    # shape from the request so the lookup matches. Callers pass the path only.
+    route_path = route_path.strip()
+    head = route_path.split(" ", 1)[0]
+    route_name = (
+        route_path
+        if " " in route_path and head.isupper()
+        else f"{method.upper()} {route_path}"
+    )
+
     # 1. Check if route exists and is tracked
     route_result = await session.exec(
-        select(Route).where(Route.name == route_path)
+        select(Route).where(Route.name == route_name)
     )
     route = route_result.one_or_none()
 
